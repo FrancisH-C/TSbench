@@ -1,5 +1,4 @@
 ---
-author: Francis Huot-Chantal
 ---
 
 # Description
