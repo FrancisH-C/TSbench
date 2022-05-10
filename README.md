@@ -1,7 +1,3 @@
----
-author: Francis Huot-Chantal
----
-
 # Description
 
 Alpha version. Usability updates coming soon.
