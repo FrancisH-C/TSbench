@@ -13,7 +13,7 @@ then be used in experiments.
 
 ## Demonstration
 
-[![Presentation](https://www.youtube.com/watch?v=s0gMqWn-nXo)](https://img.youtube.com/vi/s0gMqWn-nXo/0.jpg)
+[![Presentation](https://img.youtube.com/vi/s0gMqWn-nXo/0.jpg)](https://www.youtube.com/watch?v=s0gMqWn-nXo)
 
 # Quick start
 
