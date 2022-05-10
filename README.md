@@ -1,3 +1,9 @@
+<<<<<<< HEAD
+=======
+---
+---
+
+>>>>>>> 1e72f87a7c5fdec92677e689f4e88d50f32d3277
 # Description
 
 Alpha version. Usability updates coming soon.
