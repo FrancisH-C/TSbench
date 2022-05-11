@@ -86,6 +86,21 @@ packages.
 pip install -e ."[all]"
 ```
 
+This will install the `rpy2` `python` package, as well as some `R`
+packages.
+
+``` shell
+pip install -e ."[all]"
+```
+
+### Install without R
+
+``` shell
+pip install -e .
+pip install -e .'[test]'
+pip install -e .'[setup]'
+```
+
 ### Bare minimum installation
 
 ``` shell

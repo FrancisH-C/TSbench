@@ -52,14 +52,17 @@ install_requires = ['tqdm',
                     'ipywidgets']
 
 extras_require = {
-    'R': ['rpy2[all]'],
     'test': ['pytest'],
-    'setup': ['setuptools']
+    'setup': ['setuptools'],
 }
+
+extras_require['noR'] = list(
+    set(x for lst in extras_require.values() for x in lst))
+
+extras_require['R'] = ['rpy2[all]']
 
 extras_require['all'] = list(
     set(x for lst in extras_require.values() for x in lst))
-
 
 VERSION = "0.1.0"
 setup(
