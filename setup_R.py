@@ -7,7 +7,7 @@ def install_R_package():
         utils.install_packages("rugarch", repos="https://cloud.r-project.org")
         utils.install_packages("rmgarch", repos="https://cloud.r-project.org")
         utils.install_packages("MTS", repos="https://cloud.r-project.org")
-    except Exception:
+    except ImportError:
         print("R packages not installed")
 
 
