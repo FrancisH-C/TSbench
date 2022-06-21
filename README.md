@@ -96,9 +96,7 @@ pip install -e ."[all]"
 ### Install without R
 
 ``` shell
-pip install -e .
-pip install -e .'[test]'
-pip install -e .'[setup]'
+pip install -e ."[noR]"
 ```
 
 ### Bare minimum installation
