@@ -23,8 +23,7 @@ Windows, but it should be optional.
 
 ### Install Python
 
-Tested on `Python` version 3.9.7. Might work on `Python` \>=3.6.0 and
-\<=3.9.9.
+Tested on `Python` version 3.10.5. Might work on `Python` \>=3.8.0
 
 ### Install R (optional)
 
@@ -52,16 +51,15 @@ You can do as follows prior to the installation:
 -   Option 1 : Create a virtual environment using `virtualenv`
 
 ``` shell
-envname="~/.virtualenvs/TSbench"
-virtualenv -p python3 $envname
-. $envname/bin/activate
+virtualenv -p python3 TSbench
+. TSbench/bin/activate
 ```
 
 -   Option 2 : Create a virtual environment using `conda`
 
 ``` shell
-conda create --name $envname python=3.9
-conda activate $envname
+conda create --name TSbench
+conda activate TSbench
 ```
 
 You can add the environment to Jupyter with the following:
@@ -69,8 +67,10 @@ You can add the environment to Jupyter with the following:
 ``` shell
 pip install ipykernel
 pip install ipython
-ipython kernel install --name $envname --user
+ipython kernel install --name testWithR --user
 ```
+
+Caution: Don't forget to reload the terminal!
 
 ## Installation
 
@@ -78,13 +78,6 @@ Make sure to clone this repo and change current directory to the TSbench
 directory.
 
 ### Install all dependencies
-
-This will install the `rpy2` `python` package, as well as some `R`
-packages.
-
-``` shell
-pip install -e ."[all]"
-```
 
 This will install the `rpy2` `python` package, as well as some `R`
 packages.
@@ -107,6 +100,14 @@ pip install -e .
 
 ## Run tests
 
+### WIth R
+
 ``` shell
-pytest
+python -m pytest --R
+```
+
+### Without R
+
+``` shell
+python -m pytest
 ```
