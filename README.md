@@ -25,6 +25,18 @@ Windows, but it should be optional.
 
 Tested on `Python` version 3.10.5. Might work on `Python` \>=3.8.0
 
+### Install virtual environment (optional)
+
+-   Option 1 : `virtualenv`
+
+``` shell
+pip install virtualenv # to use it, reload your terminal
+```
+
+-   Option 2 : `conda`
+
+<https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html>
+
 ### Install R (optional)
 
 You can find details here <https://www.r-project.org/>, or install from
