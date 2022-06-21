@@ -67,7 +67,7 @@ You can add the environment to Jupyter with the following:
 ``` shell
 pip install ipykernel
 pip install ipython
-ipython kernel install --name testWithR --user
+ipython kernel install --name TSbench --user
 ```
 
 Caution: Don't forget to reload the terminal!
