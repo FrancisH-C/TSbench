@@ -70,12 +70,10 @@ pip install ipython
 ipython kernel install --name TSbench --user
 ```
 
-Caution: Don't forget to reload the terminal!
-
 ## Installation
 
-Make sure to clone this repo and change current directory to the TSbench
-directory.
+Make sure to clone this repository and change current directory to the
+TSbench directory.
 
 ### Install all dependencies
 
