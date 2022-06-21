@@ -2,4 +2,8 @@
 from TSbench.models.models import GeneratorModel, ForecastingModel, Model
 
 from TSbench.models.ARMA import ARMA
-from TSbench.models.R.rGARCH import rGARCH
+
+try:
+    from TSbench.models.R.rGARCH import rGARCH
+except ImportError:
+    pass
