@@ -1,0 +1,18 @@
+#!/bin/dash
+
+R_HOME_USER=${HOME}/.config/R2
+R_LIBS_USER=${HOME}/.config/R2/packages
+R_PROFILE_USER=${HOME}/.config/R2/.Rprofile
+R_HISTFILE=${HOME}/.config/R2/history.Rhistory
+
+mkdir -p $R_HOME_USER
+mkdir -p $R_LIBS_USER
+mkdir -p $R_PROFILE_USER
+mkdir -p $R_HISTFILE
+
+echo "R_HOME_USER = $R_HOME_USER
+R_LIBS_USER = $R_LIBS_USER
+R_PROFILE_USER = $R_PROFILE_USER
+R_HISTFILE = $R_HISTFILE" >> ~/.Renviron
+
+pip install -e ."[all]"
