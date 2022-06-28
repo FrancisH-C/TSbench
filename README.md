@@ -23,7 +23,7 @@ Windows, but it should be optional.
 
 ### Install Python
 
-Tested on `Python` version 3.10.5. Might work on `Python` \>=3.8.0
+The latest version has been tested with Python 3.10.5. It is expected to work from version 3.8.0
 
 ### For Windows user
 
@@ -34,6 +34,14 @@ encounter `UTF-8 codec error`.
 ### Create a virtual environment (optional, but suggested)
 
 -   Option 1 : Create a virtual environment using `virtualenv`
+
+## Testé avec powershell et anaconda3. Python 3.9
+## ~ est un raccourci Linux. Sous PowerShell, cela ne fonctionne pas.
+## On peut utiliser $HOME
+## J'ai le répertoire Scripts, pas bin
+## La commande ipython n'a pas fonctionné.
+## Installation réussie avec python -e .
+## Pour l'heure, les tests avec R n'ont pas fonctionné. Je suis en train d'installer RStudio avec Anaconda
 
 ``` shell
 pip install virtualenv
