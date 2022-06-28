@@ -1,9 +1,11 @@
-#!/bin/dash
+#!/bin/bash
 
-R_HOME_USER=${HOME}/.config/R2
-R_LIBS_USER=${HOME}/.config/R2/packages
-R_PROFILE_USER=${HOME}/.config/R2/.Rprofile
-R_HISTFILE=${HOME}/.config/R2/history.Rhistory
+R_HOME_USER=${HOME}/.config/R
+R_LIBS_USER=${HOME}/.config/R/packages
+R_PROFILE_USER=${HOME}/.config/R/.Rprofile
+R_HISTFILE=${HOME}/.config/R/history.Rhistory
+
+# windows
 
 mkdir -p $R_HOME_USER
 mkdir -p $R_LIBS_USER
@@ -13,6 +15,6 @@ mkdir -p $R_HISTFILE
 echo "R_HOME_USER = $R_HOME_USER
 R_LIBS_USER = $R_LIBS_USER
 R_PROFILE_USER = $R_PROFILE_USER
-R_HISTFILE = $R_HISTFILE" >> ~/.Renviron
+R_HISTFILE = $R_HISTFILE" >> $HOME/.Renviron
 
-pip install -e ."[all]"
+python -m pip install -e ."[all]"
