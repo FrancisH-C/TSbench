@@ -11,37 +11,6 @@ then be used in experiments.
 
 [![Presentation](https://img.youtube.com/vi/s0gMqWn-nXo/0.jpg)](https://www.youtube.com/watch?v=s0gMqWn-nXo)
 
-# The idea
-
-The `datatype` refers type of the data which informs about the structure
-of the data. A given `datatype` as the exact same `datafeature` which is
-the name their features (observations). `Datatype` is a collection of
-multiple categories of input from different `ID`.
-
-In `pandas` term, `ID` is the column with the same name and
-`datafeature` is the name of the rest of the columns. The `datatype` is
-store in a sequence of `filenames`.
-
-First example,
-
-``` example
-datatype = "simulated_returns"
-ID = ["ARMA1", "ARMA2", "RandomForest"]
-feature = ["returns"]
-```
-
-Second example,
-
-``` example
-datatype = "TSX"
-split = ["20160104", "20160105"]
-ID = ["ABX", "BMO", "HXT"]
-feature = ["open", "close", "high", "low"]
-```
-
-Note that the data is separated on two files (days) because of the
-quantity of data. Otherwise only one file would be needed
-
 # Installation
 
 ## Prerequisites
@@ -54,7 +23,7 @@ Windows, but it should be optional.
 
 ### Install Python
 
-The latest version has been tested with Python 3.10.5. It is expected to work from version 3.8.0
+Tested on `Python` version 3.10.5. Might work on `Python` \>=3.8.0
 
 ### For Windows user
 
@@ -65,14 +34,6 @@ encounter `UTF-8 codec error`.
 ### Create a virtual environment (optional, but suggested)
 
 -   Option 1 : Create a virtual environment using `virtualenv`
-
-## Testé avec powershell et anaconda3. Python 3.9
-## ~ est un raccourci Linux. Sous PowerShell, cela ne fonctionne pas.
-## On peut utiliser $HOME
-## J'ai le répertoire Scripts, pas bin
-## La commande ipython n'a pas fonctionné.
-## Installation réussie avec python -e .
-## Pour l'heure, les tests avec R n'ont pas fonctionné. Je suis en train d'installer RStudio avec Anaconda
 
 ``` shell
 python -m pip install virtualenv
