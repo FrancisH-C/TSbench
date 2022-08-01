@@ -1,31 +1,9 @@
-# !/usr/bin/env python
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 import io
 import os
 
 from setuptools import find_packages, setup
-
-from setuptools.command.develop import develop
-from setuptools.command.install import install
-
-
-class PostDevelopCommand(develop):
-    """Post-installation for development mode."""
-
-    def run(self):
-        develop.run(self)
-        from setup_R import install_R_package
-        install_R_package()
-
-
-class PostInstallCommand(install):
-    """Post-installation for installation mode."""
-
-    def run(self):
-        install.run(self)
-        from setup_R import install_R_package
-        install_R_package()
-
 
 try:
     app_dir = os.path.abspath(os.path.dirname(__file__))
@@ -78,10 +56,6 @@ setup(
     extras_require=extras_require,
     scripts=['setup_R.py'],
     packages=find_packages(),
-    cmdclass={
-        'develop': PostDevelopCommand,
-        'install': PostInstallCommand
-    },
     install_requires=install_requires,
     license="MIT",
     classifiers=[

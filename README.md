@@ -13,48 +13,33 @@ then be used in experiments.
 
 # Installation
 
-## Prerequisites
+There is 2 types of installation : with `R` supported or without it.
+`rpy2` is the bridge to use `R` in Python. However, **it is not
+supported on windows**.
 
-### Privileges
+## Virtual environment
 
-Admin privileges are **necessary** for installation of `Python` and `R`.
-The rest of the installation is tested with console "`run as admin`" on
-Windows, but it should be optional.
+Here is an example using `virtualenv`. For details, see the official
+documentation <https://virtualenv.pypa.io/en/latest/>.
 
-### Install Python
-
-Tested on `Python` version 3.10.5. Might work on `Python` \>=3.8.0
-
-### For Windows user
-
-There may be an issue with the locale when working on Windows in French.
-Changing the language to English (US) will solve the issue if you
-encounter `UTF-8 codec error`.
-
-### Create a virtual environment (optional, but suggested)
-
--   Option 1 : Create a virtual environment using `virtualenv`
+### Create
 
 ``` shell
 python -m pip install virtualenv
 python -m virtualenv -p python3 $HOME/.venv/TSbench
 ```
 
-Whenever you want to activate your virtual envrionment to work with
+### Activate
+
+On every shell if you want to work within the virtual environment you
+must first activate it. To activate the virtual environment you run the
+following :
 
 ``` shell
 source $HOME/.venv/TSbench/bin/activate
 ```
 
--   Option 2 : Create a virtual environment using `conda`
-
-Install `conda` following the instructions
-<https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html>
-
-``` shell
-conda create --name TSbench
-conda activate TSbench
-```
+### Add to jupyter kernels
 
 You can add the environment to Jupyter with the following:
 
@@ -64,72 +49,77 @@ python -m pip install ipython
 python -m ipykernel install --name TSbench --user
 ```
 
-### R specific prerequisites
+### Alternative : virtual environment with `conda`
 
-1.  Install R
+``` shell
+conda create --name TSbench
+conda activate TSbench
+```
 
-    You can find details here <https://www.r-project.org/>, or install
-    from <https://utstat.toronto.edu/cran/>. Make sure that console run
-    the command `R` (by settings path correctly).
+## Installation for LInux
 
-2.  For Linux
+### Install Python
 
-    Install `fortran` (`gfortran` or `gcc-fortran` depending on the
-    distribution)
+The latest version has been tested with Python 3.10.5. It is expected to
+work from version 3.8.0
 
-## Installation without R dependencies
+### Install R (for R support)
+
+Use your favorite package manager. You can find details here
+<https://www.r-project.org/>.
+
+Make sure that terminal runs the command `R` everywhere (by settings
+path correctly and restarting the terminal).
+
+### Install gcc-Fortran (for R support)
+
+Used to compile R packages. Install `fortran` (`gfortran` or
+`gcc-fortran` depending on the distribution)
+
+### Installation using script
 
 Make sure to clone this repository and change current directory to the
-TSbench directory.
+`TSbench` directory.
+
+-   With R support
+
+    ``` shell
+    python installation.py
+    ```
+
+-   Without R support
+
+    ``` shell
+    python installation.py --no-R
+    ```
+
+## Installation for Windows
+
+### Install `conda`
+
+<https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html>
+
+### Install
+
+Make sure to clone this repository and change current directory to the
+`TSbench` directory.
 
 ``` shell
 python -m pip install -e ."[noR]"
 ```
 
-## Installation with R dependencies
+## Possible issues
 
-### Scripted installation
+More information
 
-Make sure to clone this repository and change current directory to the
-TSbench directory.
+See [file:installation_supplement.md](installation_supplement.md) for
+more information
 
-``` shell
-./installation
-```
+Locale settings
 
-### Manual installation
-
-1.  Install package without `R` dependencies
-
-    ``` shell
-    pytyon -m pip install -e ."[noR]"
-    ```
-
-2.  Install `rpy2`
-
-    ``` shell
-    pytyon -m pip install rpy["all"]
-    ```
-
-3.  Create the `$HOME/.Renviron` file with writable library path. Here
-    is an example of such a file :
-
-    ``` shell
-    echo "R_HOME_USER = ${HOME}/.config/R
-    R_LIBS_USER = ${HOME}/.config/R/packages
-    R_PROFILE_USER = ${HOME}/.config/R/.Rprofile
-    R_HISTFILE = ${HOME}/.config/R/history.Rhistory" >> $HOME/.Renviron
-    ```
-
-4.  Install the necessary R packages using R.
-
-    Read the prompt and write "yes" when ask to use personal library
-
-    ``` r
-    install.packages("rugarch", repos="https://cloud.r-project.org")
-    install.packages("rmgarch", repos="https://cloud.r-project.org")
-    install.packages("MTS", repos="https://cloud.r-project.org")
-    ```
+There might be an issue with the locale when working on Windows in
+French. Changing the language to English (US) will solve the issue if
+you encounter `UTF-8 codec error`.
 
 # Usage
 
