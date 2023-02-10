@@ -14,6 +14,7 @@ except FileNotFoundError:
 
 install_requires = ['tqdm',
                     'numpy',
+                    'TSload @ git+https://github.com/FrancisH-C/TSload',
                     'randomgen',
                     'ESRNN',
                     'pandas',

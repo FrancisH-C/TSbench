@@ -11,7 +11,6 @@ import warnings
 
 warnings.simplefilter("ignore")
 
-
 class ARMA(Model):
     """Generate outputs using the ARIMA models within a simulation.
 
