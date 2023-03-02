@@ -14,7 +14,7 @@ except FileNotFoundError:
 
 install_requires = ['tqdm',
                     'numpy',
-                    'TSload @ git+https://github.com/FrancisH-C/TSload',
+                    "pyarrow",
                     'randomgen',
                     'ESRNN',
                     'pandas',
@@ -23,7 +23,7 @@ install_requires = ['tqdm',
                     'statsmodels',
                     'scikit-learn',
                     'sphinx',
-                    'furo',
+                    "sphinx-automodapi",
                     'ipywidgets',
                     'sphinx',
                     'furo',
@@ -31,11 +31,10 @@ install_requires = ['tqdm',
                     'ipywidgets']
 
 extras_require = {
-    'test': ['pytest'],
-    'setup': ['setuptools'],
+    'test': ['pytest', 'setuptools'],
 }
 
-extras_require['noR'] = list(
+extras_require['default'] = list(
     set(x for lst in extras_require.values() for x in lst))
 
 extras_require['R'] = ['rpy2[all]']
