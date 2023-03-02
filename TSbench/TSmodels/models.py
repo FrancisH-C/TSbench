@@ -47,8 +47,8 @@ class BaseModel(ABC):
 
         if corr_mat is None:
             self.corr_mat = Corr_mat(dim=dim, rg=self.rg, method="uncorrelated")
-        elif mat is not None:
-            self.corr_mat = Corr_mat(mat=mat, rg=self.rg)
+        elif corr_mat is not None:
+            self.corr_mat = Corr_mat(mat=corr_mat, rg=self.rg)
         else:
             corr_mat.dim = self.dim
             corr_mat.set_mat()
