@@ -2,7 +2,6 @@
 import numpy as np
 import pandas as pd
 from scipy.special import comb
-ARRAAAA
 
 from TSbench.TSmodels import Model
 
