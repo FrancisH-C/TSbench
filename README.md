@@ -13,119 +13,42 @@ then be used in experiments.
 
 # Installation
 
-There is 2 types of installation : with `R` supported or without it.
-`rpy2` is the bridge to use `R` in Python. However, **it is not
-supported on windows**.
-
-## Virtual environment
-
-Here is an example using `virtualenv`. For details, see the official
-documentation <https://virtualenv.pypa.io/en/latest/>.
-
-### Create
+The installation has been tested with Python from 3.10.0. See
+[file:installation_supplement.md](installation_supplement.md) for more
+information about installation.
 
 ``` shell
-python -m pip install virtualenv
-python -m virtualenv -p python3 $HOME/.venv/TSbench
+pip install -e .
 ```
 
-### Activate
+You can choose to add extra dependencies by adding one of the following
 
-On every shell if you want to work within the virtual environment you
-must first activate it. To activate the virtual environment you run the
-following :
+- \[default\]
+- \[test\]
+- \[R\]
+- \[all\]
 
-``` shell
-source $HOME/.venv/TSbench/bin/activate
-```
+## R integration
 
-### Add to jupyter kernels
+This section is used for `R` integration directly into TSbench. `rpy2`
+is the bridge to use `R` in Python. However, **it is not supported on
+windows**.
 
-You can add the environment to Jupyter with the following:
+If this integration doesn't work for you, see the documentation for how
+to use outputs from external packages into TSbench.
 
-``` shell
-python -m pip install ipykernel
-python -m pip install ipython
-python -m ipykernel install --name TSbench --user
-```
+### Prerequisites
 
-### Alternative : virtual environment with `conda`
+- `R`: You can find details here <https://www.r-project.org/>.
+- `fortran:` `gfortran` or `gcc-fortran` [depending on the
+  distribution](https://gcc.gnu.org/wiki/GFortranDistros)
 
-``` shell
-conda create --name TSbench
-conda activate TSbench
-```
+Make sure you can run the commands correctly (by settings `$PATH` and
+restarting the terminal).
 
-## Installation for LInux
-
-### Install Python
-
-The latest version has been tested with Python 3.10.5. It is expected to
-work from version 3.8.0
-
-### Install R (for R support)
-
-Use your favorite package manager. You can find details here
-<https://www.r-project.org/>.
-
-Make sure that terminal runs the command `R` everywhere (by settings
-path correctly and restarting the terminal).
-
-### Install gcc-Fortran (for R support)
-
-Used to compile R packages. Install `fortran` (`gfortran` or
-`gcc-fortran` depending on the distribution)
-
-### Installation using script
-
-Make sure to clone this repository and change current directory to the
-`TSbench` directory.
-
--   With R support
-
-    ``` shell
-    python installation.py
-    ```
-
--   Without R support
-
-    ``` shell
-    python installation.py --no-R
-    ```
-
-## Installation for Windows
-
-### Install `conda`
-
-<https://docs.conda.io/projects/conda/en/latest/user-guide/install/index.html>
-
-### Install
-
-Make sure to clone this repository and change current directory to the
-`TSbench` directory.
+### Installation and post-installation
 
 ``` shell
-python -m pip install -e ."[noR]"
-```
-
-## Possible issues
-
-More information
-
-See [file:installation_supplement.md](installation_supplement.md) for
-more information
-
-Locale settings
-
-There might be an issue with the locale when working on Windows in
-French. Changing the language to English (US) will solve the issue if
-you encounter `UTF-8 codec error`.
-
-# Usage
-
-## Run tests
-
-``` shell
-python -m pytest
-python -m pytest --R # to include R tests
+python -m pip install -e .[R]
+python setup_R.py
 ```
