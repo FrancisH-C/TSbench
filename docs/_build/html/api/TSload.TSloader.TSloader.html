@@ -1,0 +1,902 @@
+<!doctype html>
+<html class="no-js" lang="en">
+  <head><meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <meta name="color-scheme" content="light dark"><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+<link rel="index" title="Index" href="../genindex.html" /><link rel="search" title="Search" href="../search.html" /><link rel="next" title="csv2pqt" href="TSload.DataFormat.csv2pqt.html" /><link rel="prev" title="API" href="../api.html" />
+
+    <meta name="generator" content="sphinx-5.3.0, furo 2022.09.29"/>
+        <title>TSloader - TSload 0.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/furo.css?digest=d81277517bee4d6b0349d71bb2661d4890b5617c" />
+    <link rel="stylesheet" type="text/css" href="../_static/graphviz.css" />
+    <link rel="stylesheet" type="text/css" href="../_static/styles/furo-extensions.css?digest=30d1aed668e5c3a91c3e3bf6a60b675221979f0e" />
+    
+    
+
+
+<style>
+  body {
+    --color-code-background: #f8f8f8;
+  --color-code-foreground: black;
+  
+  }
+  @media not print {
+    body[data-theme="dark"] {
+      --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+    }
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme="light"]) {
+        --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+      }
+    }
+  }
+</style></head>
+  <body>
+    
+    <script>
+      document.body.dataset.theme = localStorage.getItem("theme") || "auto";
+    </script>
+    
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="svg-toc" viewBox="0 0 24 24">
+    <title>Contents</title>
+    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 1024 1024">
+      <path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 0 0 0 13.8z"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+    <title>Menu</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-menu">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+    <title>Expand</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-chevron-right">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </symbol>
+  <symbol id="svg-sun" viewBox="0 0 24 24">
+    <title>Light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon" viewBox="0 0 24 24">
+    <title>Dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+    </svg>
+  </symbol>
+  <symbol id="svg-sun-half" viewBox="0 0 24 24">
+    <title>Auto light/dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-shadow">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none"/>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M13 12h5" />
+      <path d="M13 15h4" />
+      <path d="M13 18h1" />
+      <path d="M13 9h4" />
+      <path d="M13 6h1" />
+    </svg>
+  </symbol>
+</svg>
+
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc">
+<label class="overlay sidebar-overlay" for="__navigation">
+  <div class="visually-hidden">Hide navigation sidebar</div>
+</label>
+<label class="overlay toc-overlay" for="__toc">
+  <div class="visually-hidden">Hide table of contents sidebar</div>
+</label>
+
+
+
+<div class="page">
+  <header class="mobile-header">
+    <div class="header-left">
+      <label class="nav-overlay-icon" for="__navigation">
+        <div class="visually-hidden">Toggle site navigation sidebar</div>
+        <i class="icon"><svg><use href="#svg-menu"></use></svg></i>
+      </label>
+    </div>
+    <div class="header-center">
+      <a href="../index.html"><div class="brand">TSload 0.1 documentation</div></a>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle-container theme-toggle-header">
+        <button class="theme-toggle">
+          <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+          <svg class="theme-icon-when-auto"><use href="#svg-sun-half"></use></svg>
+          <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+          <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+        </button>
+      </div>
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
+        <div class="visually-hidden">Toggle table of contents sidebar</div>
+        <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+      </label>
+    </div>
+  </header>
+  <aside class="sidebar-drawer">
+    <div class="sidebar-container">
+      
+      <div class="sidebar-sticky"><a class="sidebar-brand" href="../index.html">
+  
+  
+  <span class="sidebar-brand-text">TSload 0.1 documentation</span>
+  
+</a><form class="sidebar-search-container" method="get" action="../search.html" role="search">
+  <input class="sidebar-search" placeholder=Search name="q" aria-label="Search">
+  <input type="hidden" name="check_keywords" value="yes">
+  <input type="hidden" name="area" value="default">
+</form>
+<div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
+  <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../index.html">Home</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../quickstart.html">Quickstart</a></li>
+<li class="toctree-l1 has-children"><a class="reference internal" href="../examples.html">Examples</a><input class="toctree-checkbox" id="toctree-checkbox-1" name="toctree-checkbox-1" role="switch" type="checkbox"/><label for="toctree-checkbox-1"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul>
+<li class="toctree-l2"><a class="reference internal" href="../notebooks/example_multiprocess.html">Multiprocess</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../notebooks/example_use_case.html">Use case</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../more.html">More information</a></li>
+<li class="toctree-l1 current has-children"><a class="reference internal" href="../api.html">API</a><input checked="" class="toctree-checkbox" id="toctree-checkbox-2" name="toctree-checkbox-2" role="switch" type="checkbox"/><label for="toctree-checkbox-2"><div class="visually-hidden">Toggle child pages in navigation</div><i class="icon"><svg><use href="#svg-arrow-right"></use></svg></i></label><ul class="current">
+<li class="toctree-l2 current current-page"><a class="current reference internal" href="#">TSloader</a></li>
+<li class="toctree-l2"><a class="reference internal" href="TSload.DataFormat.csv2pqt.html">csv2pqt</a></li>
+<li class="toctree-l2"><a class="reference internal" href="TSload.DataFormat.dataset_csv2pqt.html">dataset_csv2pqt</a></li>
+<li class="toctree-l2"><a class="reference internal" href="TSload.DataFormat.merge_dataset.html">merge_dataset</a></li>
+<li class="toctree-l2"><a class="reference internal" href="TSload.DataFormat.LoadersProcess.html">LoadersProcess</a></li>
+</ul>
+</li>
+</ul>
+
+</div>
+</div>
+
+      </div>
+      
+    </div>
+  </aside>
+  <div class="main">
+    <div class="content">
+      <div class="article-container">
+        <a href="#" class="back-to-top muted-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+          </svg>
+          <span>Back to top</span>
+        </a>
+        <div class="content-icon-container">
+          
+<div class="theme-toggle-container theme-toggle-content">
+            <button class="theme-toggle">
+              <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+              <svg class="theme-icon-when-auto"><use href="#svg-sun-half"></use></svg>
+              <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+              <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+            </button>
+          </div>
+          <label class="toc-overlay-icon toc-content-icon" for="__toc">
+            <div class="visually-hidden">Toggle table of contents sidebar</div>
+            <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+          </label>
+        </div>
+        <article role="main">
+          <section id="tsloader">
+<h1>TSloader<a class="headerlink" href="#tsloader" title="Permalink to this heading">#</a></h1>
+<dl class="py class">
+<dt class="sig sig-object py" id="TSload.TSloader.TSloader">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">TSload.TSloader.</span></span><span class="sig-name descname"><span class="pre">TSloader</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'data'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">datatype</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">split</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">subsplit_indices</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">subsplit_names</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">parallel</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">permission</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'overwrite'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/TSload/TSloader.html#TSloader"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#TSload.TSloader.TSloader" title="Permalink to this definition">#</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Use to write, load and modify a timeseries dataset.</p>
+<p>A TSloader is assigned a path to a “dataset”. Optionally, it can have a
+“datatype” which informs about the structure of the data. “Datatype” is a
+collection of multiple input with different “IDs”. A given “datatype” as the
+exact same “features” which is the data indexed with a “timestamp” (the
+timeseries).</p>
+<p>A “datatype” can be splitted on different files on disk, this is called a
+“split”. A TSloader with that “datatype” and a “subsplit” (either with names
+or indices) can manipulate the data from the files. It is used when a single
+datatype is too large or for parallelization purposes.</p>
+<dl class="simple">
+<dt>Notes :</dt><dd><p>Most of the attributes are better changed using their ‘set’ method or by
+pdefining a new loader.</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>path</strong> (<em>str</em>) – Sets attribute of the same name.</p></li>
+<li><p><strong>datatype</strong> (<em>str</em>) – Sets attribute of the same name.</p></li>
+<li><p><strong>split</strong> (<em>list</em><em>[</em><em>str</em><em>]</em><em>, </em><em>optional</em>) – Sets attribute of the same name.</p></li>
+<li><p><strong>subsplit_indices</strong> (<em>list</em><em>[</em><em>int</em><em>] </em><em>, </em><em>optional</em>) – The indices to use in subsplit.
+Default is to use all the indices from the split.</p></li>
+<li><p><strong>subsplit_names</strong> (<em>list</em><em>[</em><em>str</em><em>] </em><em>, </em><em>optional</em>) – The subsplit scheme to use.
+Default is to use the whole split.</p></li>
+<li><p><strong>parallel</strong> (<em>bool</em><em>, </em><em>optional</em>) – Sets attribute of the same name.</p></li>
+<li><p><strong>permission</strong> (<em>str</em><em>, </em><em>optional</em>) – Sets attribute of the same name.</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="TSload.TSloader.TSloader.path">
+<span class="sig-name descname"><span class="pre">path</span></span><a class="headerlink" href="#TSload.TSloader.TSloader.path" title="Permalink to this definition">#</a></dt>
+<dd><p>The path to the dataset.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="TSload.TSloader.TSloader.datatype">
+<span class="sig-name descname"><span class="pre">datatype</span></span><a class="headerlink" href="#TSload.TSloader.TSloader.datatype" title="Permalink to this definition">#</a></dt>
+<dd><p>The type of data which inform about the
+structure of the data. It is used as part of the file name in the
+dataset.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="TSload.TSloader.TSloader.df">
+<span class="sig-name descname"><span class="pre">df</span></span><a class="headerlink" href="#TSload.TSloader.TSloader.df" title="Permalink to this definition">#</a></dt>
+<dd><p>The pandas’ dataset.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>pd.DataFrame</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="TSload.TSloader.TSloader.metadata">
+<span class="sig-name descname"><span class="pre">metadata</span></span><a class="headerlink" href="#TSload.TSloader.TSloader.metadata" title="Permalink to this definition">#</a></dt>
+<dd><p>The pandas’ metadata.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>pd.DataFrame</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="TSload.TSloader.TSloader.split">
+<span class="sig-name descname"><span class="pre">split</span></span><a class="headerlink" href="#TSload.TSloader.TSloader.split" title="Permalink to this definition">#</a></dt>
+<dd><p>A given datatype is store in a sequence of
+splits. Used when a single datatype is too large or for
+parallelization.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>list[str], optional</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="TSload.TSloader.TSloader.parallel">
+<span class="sig-name descname"><span class="pre">parallel</span></span><a class="headerlink" href="#TSload.TSloader.TSloader.parallel" title="Permalink to this definition">#</a></dt>
+<dd><p>Parallel informn on how to manipulate metadata.
+Parallel must be set to True to use in parallel to be used in
+parallel. Default is False.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>bool</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="TSload.TSloader.TSloader.permission">
+<span class="sig-name descname"><span class="pre">permission</span></span><a class="headerlink" href="#TSload.TSloader.TSloader.permission" title="Permalink to this definition">#</a></dt>
+<dd><p>To choose between {‘read’, ‘write’, ‘overwerite’},
+with an increasing level of permission for the loader. The options are :</p>
+<ul class="simple">
+<li><p>‘read’ : Read only the data on disk and change it on memory.</p></li>
+<li><p>‘write’ : Add only new datatype and new ID. Any operation that                would remove or change data or metadata will raise an error.</p></li>
+<li><p>‘overwrite’ (default) :  Do all operations and write on disk.</p></li>
+</ul>
+<dl class="field-list simple">
+<dt class="field-odd">Type</dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<p class="rubric">Methods Summary</p>
+<div class="table-wrapper autosummary longtable docutils container">
+<table class="autosummary longtable docutils align-default">
+<colgroup>
+<col style="width: 10%" />
+<col style="width: 90%" />
+</colgroup>
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#TSload.TSloader.TSloader.add_ID" title="TSload.TSloader.TSloader.add_ID"><code class="xref py py-obj docutils literal notranslate"><span class="pre">add_ID</span></code></a>([df, ID, collision])</p></td>
+<td><p>Add ID to datatype.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#TSload.TSloader.TSloader.add_feature" title="TSload.TSloader.TSloader.add_feature"><code class="xref py py-obj docutils literal notranslate"><span class="pre">add_feature</span></code></a>([df, ID, feature])</p></td>
+<td><p>Add feature to ID in datatype.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#TSload.TSloader.TSloader.add_metadata" title="TSload.TSloader.TSloader.add_metadata"><code class="xref py py-obj docutils literal notranslate"><span class="pre">add_metadata</span></code></a>(**metadata)</p></td>
+<td><p>Verify if entry is already there before append.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#TSload.TSloader.TSloader.copy_dataset" title="TSload.TSloader.TSloader.copy_dataset"><code class="xref py py-obj docutils literal notranslate"><span class="pre">copy_dataset</span></code></a>(new_path)</p></td>
+<td><p>Copy dataset to another location.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#TSload.TSloader.TSloader.get_filename" title="TSload.TSloader.TSloader.get_filename"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_filename</span></code></a>([prefix])</p></td>
+<td><p>Get the filename to load for current datatype and split_index.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#TSload.TSloader.TSloader.initialize_datatype" title="TSload.TSloader.TSloader.initialize_datatype"><code class="xref py py-obj docutils literal notranslate"><span class="pre">initialize_datatype</span></code></a>([df])</p></td>
+<td><p>Initialize datatatype's with data.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#TSload.TSloader.TSloader.load" title="TSload.TSloader.TSloader.load"><code class="xref py py-obj docutils literal notranslate"><span class="pre">load</span></code></a>()</p></td>
+<td><p>Load datatatype's data.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#TSload.TSloader.TSloader.load_metadata" title="TSload.TSloader.TSloader.load_metadata"><code class="xref py py-obj docutils literal notranslate"><span class="pre">load_metadata</span></code></a>()</p></td>
+<td><p>Load datataset's metadata.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#TSload.TSloader.TSloader.merge_metadata" title="TSload.TSloader.TSloader.merge_metadata"><code class="xref py py-obj docutils literal notranslate"><span class="pre">merge_metadata</span></code></a>([write, rm])</p></td>
+<td><p>Merge metadata between 'metadata-' file.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#TSload.TSloader.TSloader.move_dataset" title="TSload.TSloader.TSloader.move_dataset"><code class="xref py py-obj docutils literal notranslate"><span class="pre">move_dataset</span></code></a>(new_path)</p></td>
+<td><p>Move dataset to another location.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#TSload.TSloader.TSloader.next_split_index" title="TSload.TSloader.TSloader.next_split_index"><code class="xref py py-obj docutils literal notranslate"><span class="pre">next_split_index</span></code></a>()</p></td>
+<td><p>Increment split index by 1.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#TSload.TSloader.TSloader.overwrite_metadata" title="TSload.TSloader.TSloader.overwrite_metadata"><code class="xref py py-obj docutils literal notranslate"><span class="pre">overwrite_metadata</span></code></a>(**metadata)</p></td>
+<td><p>Overwrite metadata.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#TSload.TSloader.TSloader.reset_split_index" title="TSload.TSloader.TSloader.reset_split_index"><code class="xref py py-obj docutils literal notranslate"><span class="pre">reset_split_index</span></code></a>()</p></td>
+<td><p>Reset split index to 0.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#TSload.TSloader.TSloader.rm_ID" title="TSload.TSloader.TSloader.rm_ID"><code class="xref py py-obj docutils literal notranslate"><span class="pre">rm_ID</span></code></a>([ID, rm_from_metadata])</p></td>
+<td><p>Remove ID to datatype.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#TSload.TSloader.TSloader.rm_dataset" title="TSload.TSloader.TSloader.rm_dataset"><code class="xref py py-obj docutils literal notranslate"><span class="pre">rm_dataset</span></code></a>([ignore_errors])</p></td>
+<td><p>Remove dataset.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#TSload.TSloader.TSloader.rm_datatype" title="TSload.TSloader.TSloader.rm_datatype"><code class="xref py py-obj docutils literal notranslate"><span class="pre">rm_datatype</span></code></a>([rm_from_metadata])</p></td>
+<td><p>Remove datatatype's data.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#TSload.TSloader.TSloader.rm_feature" title="TSload.TSloader.TSloader.rm_feature"><code class="xref py py-obj docutils literal notranslate"><span class="pre">rm_feature</span></code></a>([feature, rm_from_metadata])</p></td>
+<td><p>Remove feature to datatype.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#TSload.TSloader.TSloader.set_datatype" title="TSload.TSloader.TSloader.set_datatype"><code class="xref py py-obj docutils literal notranslate"><span class="pre">set_datatype</span></code></a>(datatype[, split, ...])</p></td>
+<td><p>Change datatype and split used to load data.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#TSload.TSloader.TSloader.set_path" title="TSload.TSloader.TSloader.set_path"><code class="xref py py-obj docutils literal notranslate"><span class="pre">set_path</span></code></a>(path)</p></td>
+<td><p>Set the current path.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#TSload.TSloader.TSloader.set_permission" title="TSload.TSloader.TSloader.set_permission"><code class="xref py py-obj docutils literal notranslate"><span class="pre">set_permission</span></code></a>([permission])</p></td>
+<td><p>Set the current path.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#TSload.TSloader.TSloader.set_split_index" title="TSload.TSloader.TSloader.set_split_index"><code class="xref py py-obj docutils literal notranslate"><span class="pre">set_split_index</span></code></a>(index)</p></td>
+<td><p>Set the split index.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#TSload.TSloader.TSloader.toggle_parallel" title="TSload.TSloader.TSloader.toggle_parallel"><code class="xref py py-obj docutils literal notranslate"><span class="pre">toggle_parallel</span></code></a>()</p></td>
+<td><p>Toggle parallel option.</p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#TSload.TSloader.TSloader.write" title="TSload.TSloader.TSloader.write"><code class="xref py py-obj docutils literal notranslate"><span class="pre">write</span></code></a>()</p></td>
+<td><p>Write datatatype's data.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#TSload.TSloader.TSloader.write_metadata" title="TSload.TSloader.TSloader.write_metadata"><code class="xref py py-obj docutils literal notranslate"><span class="pre">write_metadata</span></code></a>()</p></td>
+<td><p>Write datataset's metadata.</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p class="rubric">Methods Documentation</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="TSload.TSloader.TSloader.add_ID">
+<span class="sig-name descname"><span class="pre">add_ID</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">DataFrame</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ID</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">collision</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'overwrite'</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="../_modules/TSload/TSloader.html#TSloader.add_ID"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#TSload.TSloader.TSloader.add_ID" title="Permalink to this definition">#</a></dt>
+<dd><p>Add ID to datatype.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>df</strong> (<em>pd.DataFrame</em>) – A dataframe with data for a given <cite>ID</cite>.</p></li>
+<li><p><strong>ID</strong> (<em>str</em>) – The unique identication name for the data.</p></li>
+<li><p><strong>collision</strong> (<em>str</em><em>, </em><em>optional</em>) – <p>To choose between {‘ignore’, ‘append’,
+‘update’, ‘overwerite’}</p>
+<ul>
+<li><p>’overwrite’ (default) : Overwrite the value.</p></li>
+<li><p>’update’ : Updates the value.</p></li>
+<li><dl class="simple">
+<dt>’append’<span class="classifier">Append without index verification df</span></dt><dd><p>(could lead to multiple index problem).</p>
+</dd>
+</dl>
+</li>
+<li><p>’ignore’ : Does nothing.</p></li>
+</ul>
+</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><p><strong>ValueError</strong> – If <cite>ID</cite> or <cite>df</cite> are not well-defined or if trying to
+    overwrite data without the permisison.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="TSload.TSloader.TSloader.add_feature">
+<span class="sig-name descname"><span class="pre">add_feature</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">DataFrame</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ID</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">feature</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="../_modules/TSload/TSloader.html#TSloader.add_feature"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#TSload.TSloader.TSloader.add_feature" title="Permalink to this definition">#</a></dt>
+<dd><p>Add feature to ID in datatype.</p>
+<p>This method needs the overwrite permission because you overwrite an ID by
+providing a feature, hence changing the length of the ID.</p>
+<p>If ID is not specify, add it to all datatype. If feature already present and
+not overwrite, gives a warning.  To use <cite>add_feature</cite>, you need overwrite
+permission, because you overwrite the previous features to have the same
+lenght as the added <cite>feature</cite>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>df</strong> (<em>pd.DataFrame</em>) – A dataframe with a <cite>feature</cite> column for a given <cite>ID</cite>.</p></li>
+<li><p><strong>ID</strong> (<em>str</em>) – The unique identication name for the data.</p></li>
+<li><p><strong>feature</strong> (<em>str</em>) – The feature name for the column.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><p><strong>ValueError</strong> – If <cite>ID</cite>, <cite>feature</cite> or <cite>df</cite> are not well-defined or if trying to
+    overwrite data without the permisison.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="TSload.TSloader.TSloader.add_metadata">
+<span class="sig-name descname"><span class="pre">add_metadata</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">metadata</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="../_modules/TSload/TSloader.html#TSloader.add_metadata"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#TSload.TSloader.TSloader.add_metadata" title="Permalink to this definition">#</a></dt>
+<dd><p>Verify if entry is already there before append.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>**metadata</strong> (<em>list</em><em>[</em><em>str</em><em>]</em>) – </p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="TSload.TSloader.TSloader.copy_dataset">
+<span class="sig-name descname"><span class="pre">copy_dataset</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">new_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="../_modules/TSload/TSloader.html#TSloader.copy_dataset"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#TSload.TSloader.TSloader.copy_dataset" title="Permalink to this definition">#</a></dt>
+<dd><p>Copy dataset to another location.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>new_path</strong> (<em>str</em>) – The path where to copy the data.</p>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><ul class="simple">
+<li><p><strong>ValueError</strong> – If <cite>self.path</cite> is equal to <cite>new_path</cite>.</p></li>
+<li><p><strong>OSError</strong> – If <cite>new_path</cite> directory exsists.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="TSload.TSloader.TSloader.get_filename">
+<span class="sig-name descname"><span class="pre">get_filename</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">prefix</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">''</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="reference internal" href="../_modules/TSload/TSloader.html#TSloader.get_filename"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#TSload.TSloader.TSloader.get_filename" title="Permalink to this definition">#</a></dt>
+<dd><p>Get the filename to load for current datatype and split_index.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>prefix</strong> (<em>str</em><em>, </em><em>optional</em>) – A prefix to add to a filename.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>The filename to load for current datatype and split_index.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="TSload.TSloader.TSloader.initialize_datatype">
+<span class="sig-name descname"><span class="pre">initialize_datatype</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">DataFrame</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="../_modules/TSload/TSloader.html#TSloader.initialize_datatype"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#TSload.TSloader.TSloader.initialize_datatype" title="Permalink to this definition">#</a></dt>
+<dd><p>Initialize datatatype’s with data.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>df</strong> (<em>pd.DataFrame</em>) – A dataframe with data for the datatype.</p>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><p><strong>ValueError</strong> – If trying to overwrite data without ‘overwrite’ permission
+    or <cite>df</cite> is not well-defined.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="TSload.TSloader.TSloader.load">
+<span class="sig-name descname"><span class="pre">load</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="reference internal" href="../_modules/TSload/TSloader.html#TSloader.load"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#TSload.TSloader.TSloader.load" title="Permalink to this definition">#</a></dt>
+<dd><p>Load datatatype’s data.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>The pandas’ data.</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>pd.DataFrame</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="TSload.TSloader.TSloader.load_metadata">
+<span class="sig-name descname"><span class="pre">load_metadata</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">DataFrame</span></span></span><a class="reference internal" href="../_modules/TSload/TSloader.html#TSloader.load_metadata"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#TSload.TSloader.TSloader.load_metadata" title="Permalink to this definition">#</a></dt>
+<dd><p>Load datataset’s metadata.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p>The pandas’ metadata.</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>pd.DataFrame</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="TSload.TSloader.TSloader.merge_metadata">
+<span class="sig-name descname"><span class="pre">merge_metadata</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">write</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rm</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="../_modules/TSload/TSloader.html#TSloader.merge_metadata"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#TSload.TSloader.TSloader.merge_metadata" title="Permalink to this definition">#</a></dt>
+<dd><p>Merge metadata between ‘metadata-’ file.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>write</strong> (<em>bool</em><em>, </em><em>optional</em>) – Whether or not to write the merged metadata.</p></li>
+<li><p><strong>rm</strong> (<em>bool</em><em>, </em><em>optional</em>) – Whether or not to removed all the ‘metadata-’ files
+after the merge.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><p><strong>ValueError</strong> – If trying to write metadata with ‘read’
+    permission; Or if trying to remove metadata (on disk or
+    memory) without ‘overwrite’ permission; Or if <cite>parallel</cite>
+    attribute is <cite>True</cite>.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="TSload.TSloader.TSloader.move_dataset">
+<span class="sig-name descname"><span class="pre">move_dataset</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">new_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="../_modules/TSload/TSloader.html#TSloader.move_dataset"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#TSload.TSloader.TSloader.move_dataset" title="Permalink to this definition">#</a></dt>
+<dd><p>Move dataset to another location.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>new_path</strong> (<em>str</em>) – The path where to move the data.</p>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><ul class="simple">
+<li><p><strong>ValueError</strong> – If permission is not ovwerwrite or <cite>self.path</cite> is
+    equal to <cite>new_path</cite>.</p></li>
+<li><p><strong>OSError</strong> – If <cite>new_path</cite> directory exsists.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="TSload.TSloader.TSloader.next_split_index">
+<span class="sig-name descname"><span class="pre">next_split_index</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="../_modules/TSload/TSloader.html#TSloader.next_split_index"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#TSload.TSloader.TSloader.next_split_index" title="Permalink to this definition">#</a></dt>
+<dd><p>Increment split index by 1.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="TSload.TSloader.TSloader.overwrite_metadata">
+<span class="sig-name descname"><span class="pre">overwrite_metadata</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">metadata</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="../_modules/TSload/TSloader.html#TSloader.overwrite_metadata"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#TSload.TSloader.TSloader.overwrite_metadata" title="Permalink to this definition">#</a></dt>
+<dd><p>Overwrite metadata.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>**metadata</strong> (<em>list</em><em>[</em><em>str</em><em>]</em>) – </p>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><p><strong>ValueError</strong> – If permission is not overwrite.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="TSload.TSloader.TSloader.reset_split_index">
+<span class="sig-name descname"><span class="pre">reset_split_index</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="../_modules/TSload/TSloader.html#TSloader.reset_split_index"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#TSload.TSloader.TSloader.reset_split_index" title="Permalink to this definition">#</a></dt>
+<dd><p>Reset split index to 0.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="TSload.TSloader.TSloader.rm_ID">
+<span class="sig-name descname"><span class="pre">rm_ID</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ID</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rm_from_metadata</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="../_modules/TSload/TSloader.html#TSloader.rm_ID"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#TSload.TSloader.TSloader.rm_ID" title="Permalink to this definition">#</a></dt>
+<dd><p>Remove ID to datatype.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>ID</strong> (<em>str</em>) – The unique identication name for the data.</p></li>
+<li><p><strong>rm_from_metadata</strong> (<em>bool</em><em>, </em><em>optional</em>) – If the <cite>ID</cite> should also be removed from
+metadata. Default is True.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><p><strong>ValueError</strong> – If permission is not “overwrite” or if <cite>ID</cite> is not in the
+    index of <cite>self.df</cite>.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="TSload.TSloader.TSloader.rm_dataset">
+<span class="sig-name descname"><span class="pre">rm_dataset</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">ignore_errors</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="../_modules/TSload/TSloader.html#TSloader.rm_dataset"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#TSload.TSloader.TSloader.rm_dataset" title="Permalink to this definition">#</a></dt>
+<dd><p>Remove dataset. Dangerous method.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>ignore_errors</strong> (<em>str</em><em>, </em><em>optional</em>) – If ignore_errors is set to True, errors
+arising due to unsuccessful file removals will be ignored. This
+is set to <cite>True</cite> by default</p>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><p><strong>ValueError</strong> – If permission is not overwerite.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="TSload.TSloader.TSloader.rm_datatype">
+<span class="sig-name descname"><span class="pre">rm_datatype</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">rm_from_metadata</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="../_modules/TSload/TSloader.html#TSloader.rm_datatype"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#TSload.TSloader.TSloader.rm_datatype" title="Permalink to this definition">#</a></dt>
+<dd><p>Remove datatatype’s data.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>rm_from_metadata</strong> (<em>bool</em><em>, </em><em>optional</em>) – If the datatype should also be removed
+from metadata. Default is True.</p>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><p><strong>ValueError</strong> – If permission is not overwrite or <cite>self.path</cite> is equal to
+    <cite>new_path</cite>.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="TSload.TSloader.TSloader.rm_feature">
+<span class="sig-name descname"><span class="pre">rm_feature</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">feature</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">rm_from_metadata</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="../_modules/TSload/TSloader.html#TSloader.rm_feature"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#TSload.TSloader.TSloader.rm_feature" title="Permalink to this definition">#</a></dt>
+<dd><p>Remove feature to datatype.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>feature</strong> (<em>str</em>) – The feature name for the column.</p></li>
+<li><p><strong>rm_from_metadata</strong> (<em>bool</em><em>, </em><em>optional</em>) – If the <cite>feature</cite> should also be removed
+from metadata. Default is True.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><p><strong>ValueError</strong> – If permission is not “overwrite” or if <cite>feature</cite> is not in the
+    columns of <cite>self.df</cite>.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="TSload.TSloader.TSloader.set_datatype">
+<span class="sig-name descname"><span class="pre">set_datatype</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">datatype</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">split</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">subsplit_indices</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">subsplit_names</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">Optional</span><span class="p"><span class="pre">[</span></span><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span><span class="p"><span class="pre">]</span></span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="../_modules/TSload/TSloader.html#TSloader.set_datatype"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#TSload.TSloader.TSloader.set_datatype" title="Permalink to this definition">#</a></dt>
+<dd><p>Change datatype and split used to load data.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>datatype</strong> (<em>str</em>) – The datatype to set.</p></li>
+<li><p><strong>split</strong> (<em>list</em><em>[</em><em>str</em><em>]</em><em>, </em><em>optional</em>) – The split to set.</p></li>
+<li><p><strong>subsplit_indices</strong> (<em>list</em><em>[</em><em>int</em><em>]</em><em>, </em><em>optional</em>) – The split indices to set.</p></li>
+<li><p><strong>subsplit_names</strong> (<em>list</em><em>[</em><em>str</em><em>]</em><em>, </em><em>optional</em>) – The split names to set.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Raises</dt>
+<dd class="field-even"><p><strong>ValueError</strong> – If <cite>datatype</cite> is undefined.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="TSload.TSloader.TSloader.set_path">
+<span class="sig-name descname"><span class="pre">set_path</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="../_modules/TSload/TSloader.html#TSloader.set_path"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#TSload.TSloader.TSloader.set_path" title="Permalink to this definition">#</a></dt>
+<dd><p>Set the current path.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>path</strong> (<em>str</em>) – The path to set.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="TSload.TSloader.TSloader.set_permission">
+<span class="sig-name descname"><span class="pre">set_permission</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">permission</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'write'</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="../_modules/TSload/TSloader.html#TSloader.set_permission"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#TSload.TSloader.TSloader.set_permission" title="Permalink to this definition">#</a></dt>
+<dd><p>Set the current path.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>permission</strong> (<em>str</em><em>, </em><em>optional</em>) – <p>To choose between {‘read’, ‘write’,
+‘overwerite’}, with an increasing level of permission for the loader.
+The options are :</p>
+<ul class="simple">
+<li><p>’read’ : Read only the data on disk and change it on memory.</p></li>
+<li><p>’write’ : Add only new datatype and new ID. Any operation that                    would remove or change data or metadata will raise an error.</p></li>
+<li><p>’overwrite’ (default) :  Do all operations and write on disk.</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="TSload.TSloader.TSloader.set_split_index">
+<span class="sig-name descname"><span class="pre">set_split_index</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">index</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="../_modules/TSload/TSloader.html#TSloader.set_split_index"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#TSload.TSloader.TSloader.set_split_index" title="Permalink to this definition">#</a></dt>
+<dd><p>Set the split index.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>index</strong> (<em>int</em>) – Value to set the current split index.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="TSload.TSloader.TSloader.toggle_parallel">
+<span class="sig-name descname"><span class="pre">toggle_parallel</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="../_modules/TSload/TSloader.html#TSloader.toggle_parallel"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#TSload.TSloader.TSloader.toggle_parallel" title="Permalink to this definition">#</a></dt>
+<dd><p>Toggle parallel option.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="TSload.TSloader.TSloader.write">
+<span class="sig-name descname"><span class="pre">write</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="../_modules/TSload/TSloader.html#TSloader.write"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#TSload.TSloader.TSloader.write" title="Permalink to this definition">#</a></dt>
+<dd><p>Write datatatype’s data.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Raises</dt>
+<dd class="field-odd"><p><strong>ValueError</strong> – If permission is only ‘read’ or if attribute <cite>datatype</cite> is not
+    defined.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="TSload.TSloader.TSloader.write_metadata">
+<span class="sig-name descname"><span class="pre">write_metadata</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">None</span></span></span><a class="reference internal" href="../_modules/TSload/TSloader.html#TSloader.write_metadata"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#TSload.TSloader.TSloader.write_metadata" title="Permalink to this definition">#</a></dt>
+<dd><p>Write datataset’s metadata.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Raises</dt>
+<dd class="field-odd"><p><strong>ValueError</strong> – If permission is read.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+
+        </article>
+      </div>
+      <footer>
+        
+        <div class="related-pages">
+          <a class="next-page" href="TSload.DataFormat.csv2pqt.html">
+              <div class="page-info">
+                <div class="context">
+                  <span>Next</span>
+                </div>
+                <div class="title">csv2pqt</div>
+              </div>
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+            </a>
+          <a class="prev-page" href="../api.html">
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+              <div class="page-info">
+                <div class="context">
+                  <span>Previous</span>
+                </div>
+                
+                <div class="title">API</div>
+                
+              </div>
+            </a>
+        </div>
+        <div class="bottom-of-page">
+          <div class="left-details">
+            <div class="copyright">
+                Copyright &#169; 2022, Francis Huot-Chantal
+            </div>
+            Made with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a class="muted-link" href="https://pradyunsg.me">@pradyunsg</a>'s
+            
+            <a href="https://github.com/pradyunsg/furo">Furo</a>
+            
+          </div>
+          <div class="right-details">
+            <div class="icons">
+              
+            </div>
+          </div>
+        </div>
+        
+      </footer>
+    </div>
+    <aside class="toc-drawer">
+      
+      
+      <div class="toc-sticky toc-scroll">
+        <div class="toc-title-container">
+          <span class="toc-title">
+            On this page
+          </span>
+        </div>
+        <div class="toc-tree-container">
+          <div class="toc-tree">
+            <ul>
+<li><a class="reference internal" href="#">TSloader</a><ul>
+<li><a class="reference internal" href="#TSload.TSloader.TSloader"><code class="docutils literal notranslate"><span class="pre">TSloader</span></code></a><ul>
+<li><a class="reference internal" href="#TSload.TSloader.TSloader.path"><code class="docutils literal notranslate"><span class="pre">TSloader.path</span></code></a></li>
+<li><a class="reference internal" href="#TSload.TSloader.TSloader.datatype"><code class="docutils literal notranslate"><span class="pre">TSloader.datatype</span></code></a></li>
+<li><a class="reference internal" href="#TSload.TSloader.TSloader.df"><code class="docutils literal notranslate"><span class="pre">TSloader.df</span></code></a></li>
+<li><a class="reference internal" href="#TSload.TSloader.TSloader.metadata"><code class="docutils literal notranslate"><span class="pre">TSloader.metadata</span></code></a></li>
+<li><a class="reference internal" href="#TSload.TSloader.TSloader.split"><code class="docutils literal notranslate"><span class="pre">TSloader.split</span></code></a></li>
+<li><a class="reference internal" href="#TSload.TSloader.TSloader.parallel"><code class="docutils literal notranslate"><span class="pre">TSloader.parallel</span></code></a></li>
+<li><a class="reference internal" href="#TSload.TSloader.TSloader.permission"><code class="docutils literal notranslate"><span class="pre">TSloader.permission</span></code></a></li>
+<li><a class="reference internal" href="#TSload.TSloader.TSloader.add_ID"><code class="docutils literal notranslate"><span class="pre">TSloader.add_ID()</span></code></a></li>
+<li><a class="reference internal" href="#TSload.TSloader.TSloader.add_feature"><code class="docutils literal notranslate"><span class="pre">TSloader.add_feature()</span></code></a></li>
+<li><a class="reference internal" href="#TSload.TSloader.TSloader.add_metadata"><code class="docutils literal notranslate"><span class="pre">TSloader.add_metadata()</span></code></a></li>
+<li><a class="reference internal" href="#TSload.TSloader.TSloader.copy_dataset"><code class="docutils literal notranslate"><span class="pre">TSloader.copy_dataset()</span></code></a></li>
+<li><a class="reference internal" href="#TSload.TSloader.TSloader.get_filename"><code class="docutils literal notranslate"><span class="pre">TSloader.get_filename()</span></code></a></li>
+<li><a class="reference internal" href="#TSload.TSloader.TSloader.initialize_datatype"><code class="docutils literal notranslate"><span class="pre">TSloader.initialize_datatype()</span></code></a></li>
+<li><a class="reference internal" href="#TSload.TSloader.TSloader.load"><code class="docutils literal notranslate"><span class="pre">TSloader.load()</span></code></a></li>
+<li><a class="reference internal" href="#TSload.TSloader.TSloader.load_metadata"><code class="docutils literal notranslate"><span class="pre">TSloader.load_metadata()</span></code></a></li>
+<li><a class="reference internal" href="#TSload.TSloader.TSloader.merge_metadata"><code class="docutils literal notranslate"><span class="pre">TSloader.merge_metadata()</span></code></a></li>
+<li><a class="reference internal" href="#TSload.TSloader.TSloader.move_dataset"><code class="docutils literal notranslate"><span class="pre">TSloader.move_dataset()</span></code></a></li>
+<li><a class="reference internal" href="#TSload.TSloader.TSloader.next_split_index"><code class="docutils literal notranslate"><span class="pre">TSloader.next_split_index()</span></code></a></li>
+<li><a class="reference internal" href="#TSload.TSloader.TSloader.overwrite_metadata"><code class="docutils literal notranslate"><span class="pre">TSloader.overwrite_metadata()</span></code></a></li>
+<li><a class="reference internal" href="#TSload.TSloader.TSloader.reset_split_index"><code class="docutils literal notranslate"><span class="pre">TSloader.reset_split_index()</span></code></a></li>
+<li><a class="reference internal" href="#TSload.TSloader.TSloader.rm_ID"><code class="docutils literal notranslate"><span class="pre">TSloader.rm_ID()</span></code></a></li>
+<li><a class="reference internal" href="#TSload.TSloader.TSloader.rm_dataset"><code class="docutils literal notranslate"><span class="pre">TSloader.rm_dataset()</span></code></a></li>
+<li><a class="reference internal" href="#TSload.TSloader.TSloader.rm_datatype"><code class="docutils literal notranslate"><span class="pre">TSloader.rm_datatype()</span></code></a></li>
+<li><a class="reference internal" href="#TSload.TSloader.TSloader.rm_feature"><code class="docutils literal notranslate"><span class="pre">TSloader.rm_feature()</span></code></a></li>
+<li><a class="reference internal" href="#TSload.TSloader.TSloader.set_datatype"><code class="docutils literal notranslate"><span class="pre">TSloader.set_datatype()</span></code></a></li>
+<li><a class="reference internal" href="#TSload.TSloader.TSloader.set_path"><code class="docutils literal notranslate"><span class="pre">TSloader.set_path()</span></code></a></li>
+<li><a class="reference internal" href="#TSload.TSloader.TSloader.set_permission"><code class="docutils literal notranslate"><span class="pre">TSloader.set_permission()</span></code></a></li>
+<li><a class="reference internal" href="#TSload.TSloader.TSloader.set_split_index"><code class="docutils literal notranslate"><span class="pre">TSloader.set_split_index()</span></code></a></li>
+<li><a class="reference internal" href="#TSload.TSloader.TSloader.toggle_parallel"><code class="docutils literal notranslate"><span class="pre">TSloader.toggle_parallel()</span></code></a></li>
+<li><a class="reference internal" href="#TSload.TSloader.TSloader.write"><code class="docutils literal notranslate"><span class="pre">TSloader.write()</span></code></a></li>
+<li><a class="reference internal" href="#TSload.TSloader.TSloader.write_metadata"><code class="docutils literal notranslate"><span class="pre">TSloader.write_metadata()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      </div>
+      
+      
+    </aside>
+  </div>
+</div><script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/sphinx_highlight.js"></script>
+    <script src="../_static/scripts/furo.js"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    </body>
+</html>
