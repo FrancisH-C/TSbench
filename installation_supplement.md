@@ -1,6 +1,3 @@
----
----
-
 # Windows
 
 ## Information for R
