@@ -3,9 +3,22 @@
 
 # Windows
 
-## virtualenv
+## Information for R
 
-Here is an example using `virtualenv`. For details, see the official
+Install R from <https://cran.r-project.org/bin/windows/base/>, you can
+find details here <https://www.r-project.org/>.
+
+As of now, `rpy2` **is not supported on windows**.
+<https://rpy2.github.io/doc/latest/html/overview.html#install-installation>
+It may work in the future or with some specific docker configuration.
+
+See the documentation for how to use outputs from external packages into
+TSbench.
+
+## Virtual environment in python
+
+One way to setup a viratual envrionement in python is to use
+`virtualenv`. Here is a simple example, for details, see the official
 documentation <https://docs.python.org/3/library/venv.html>.
 
 ### Create
@@ -21,25 +34,23 @@ On every shell if you want to work within the virtual environment you
 must first activate it. To activate the virtual environment you run the
 following :
 
-- PowerShell
+- `PowerShell`
 
-  1.  Start Windows PowerShell with the "Run as Administrator"
+Start Windows `PowerShell` with the "Run as Administrator" option
 
-  2.  set-executionpolicy remotesigned
+``` ps
+TSbench\Scripts\Activate.ps1
+```
 
-  virtualenv –python C:.exe venv C:\\ \<venv\>.bat
+- `cmd.exe`
 
-  ``` ps
-  TSbench\Scripts\Activate.ps1
-  ```
+Start Windows `cmd.exe` with the "Run as Administrator" option
 
-- cmd.exe
-
-      TSbench\Scripts\activate.bat
+    TSbench\Scripts\activate.bat
 
 ### Add to jupyter kernels
 
-You can add the environment to Jupyter with the following:
+You can add the environment to `Jupyter` with the following:
 
 ``` shell
 python -m pip install ipykernel
@@ -47,16 +58,17 @@ python -m pip install ipython
 python -m ipykernel install --name TSbench --user
 ```
 
-## Information for R
+## Troubleshooting
 
-Install R from <https://cran.r-project.org/bin/windows/base/>, you can
-find details here <https://www.r-project.org/>.
+### `PowerShell` `virtualenv` not working
 
-As of now, `rpy2` **is not supported on windows**.
-<https://rpy2.github.io/doc/latest/html/overview.html#install-installation>
-It may work in the future or some specific docker configuration.
+Set the following
 
-## Locale settings
+``` ps
+set-executionpolicy remotesigned
+```
+
+### Locale settings
 
 There might be an issue with the locale when working on Windows in
 French. Changing the language to English (US) will solve the issue if
@@ -64,9 +76,10 @@ you encounter `UTF-8 codec error`.
 
 # Linux
 
-## virtualenv
+## Virtual environment in python
 
-Here is an example using `virtualenv`. For details, see the official
+One way to setup a viratual envrionement in python is to use
+`virtualenv`. Here is a simple example, for details, see the official
 documentation <https://docs.python.org/3/library/venv.html>.
 
 ### Create
@@ -102,12 +115,12 @@ python -m ipykernel install --name TSbench --user
 
 If the post-installation setup for `R` doesn't work, make sure the
 prerequisites are met. Make sure every command can be run by the
-terminal everywhere (by setting the `$PATH`).
+terminal everywhere (by setting the `$PATH` and restarting the
+terminal).
 
 ### Remove
 
-If you want to remove `R` integration, you can re-install or simply
-remove rpy2 using
+If you want to remove `R` integration simply remove rpy2 using
 
 ``` shell
 python -m pip uninstall rpy2
@@ -116,10 +129,10 @@ python -m pip uninstall rpy2
 ### Manual setup
 
 If you don't like `setup_R.py` or if you don't use the integration with
-rpy2, you can use a custom R setup.
+rpy2, you can use a custom R setup. Here are presented the steps based
+on `Setup_R.py` as a starting point.
 
-1.  Create the `$HOME/.Renviron` file with writable library path. Here
-    is an example used in `Setup_R.py`
+1.  Create the `$HOME/.Renviron` file with writable library path.
 
     ``` shell
     R_HOME_USER=$HOME/.config/R
@@ -136,7 +149,7 @@ rpy2, you can use a custom R setup.
     R_HISTFILE = $R_HISTFILE" >> $HOME/.Renviron
     ```
 
-2.  Install `R` packages using R
+2.  Install `R` packages using `R`
 
     ``` r
     install.packages("rugarch", repos="https://cloud.r-project.org")
