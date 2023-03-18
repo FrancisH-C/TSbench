@@ -16,7 +16,7 @@ See the following video for a presentation of the package
 # Installation
 
 The installation has been tested with `Python 3.10.0`. See
-[file:installation_supplement.md](installation_supplement.md) for more
+[installation_supplement.md](installation_supplement.md) for more
 information about installation.
 
 ``` shell
