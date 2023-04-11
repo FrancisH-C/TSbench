@@ -2,6 +2,7 @@ import numpy as np
 from numpy import random as rand
 from numpy.linalg import cholesky
 
+from typing import List, Dict, Tuple
 from TSbench.TSmodels.models import GeneratorModel
 from TSbench.TSmodels.GARCH import GARCH
 
@@ -20,14 +21,14 @@ class VEC_GARCH(GARCH):
         """Initialize VEC_GARCH."""
         super().__init__(**garch_args)
 
-    def generate(self, T: int) -> dict[str, np.array]:
+    def generate(self, T: int) -> Dict[str, np.array]:
         """Generate `T` values using VEC-GARCH.
 
         Args:
             T (int): Number of observations to generate.
 
         Returns:
-            dict[str, np.array] : {key :value} outputs
+            Dict[str, np.array] : {key :value} outputs
                 - {"returns"  : np.array of returns}
                 - {"vol"  : np.array of vol}.
         """
@@ -46,14 +47,14 @@ class VEC_GARCH(GARCH):
         self.outputs = {"returns": epsilon, "vol": vol}
         return self.outputs
 
-    def initial_state_default(self, T: int) -> tuple[np.array, np.array]:
+    def initial_state_default(self, T: int) -> Tuple[np.array, np.array]:
         """Generate inital state as zero returns and identity variance matrix.
 
         Args:
             T (int): Number of observations to generate.
 
         Returns:
-            tuple[np.array,np.array] : A tupple (returns, vol).
+            Tuple[np.array,np.array] : A tupple (returns, vol).
 
         """
         epsilon = np.zeros((self.dim, T))
@@ -114,14 +115,14 @@ class SPD_VEC_GARCH(VEC_GARCH):
         """Initialize SPC_VEC_GARCH."""
         super().__init__(**garch_args)
 
-    def generate(self, T: int) -> dict[str, np.array]:
+    def generate(self, T: int) -> Dict[str, np.array]:
         """Generate `T` values using SPD-VEC-GARCH.
 
         Args:
             T (int): Number of observations to generate.
 
         Returns:
-            dict[str, np.array] : {key :value} outputs :
+            Dict[str, np.array] : {key :value} outputs :
                 - {"returns"  : np.array of returns}
                 - {"vol"  : np.array of vol}
         """

@@ -2,6 +2,7 @@
 import numpy as np
 from numpy.random import Generator
 from randomgen import Xoshiro256
+from typing import List
 
 
 class Corr_mat:
@@ -196,12 +197,12 @@ class Corr_mat:
         self.make_corr_mat()
         return self.mat
 
-    def specific_corr(self, indices: list[tuple], corr: list[int]) -> np.ndarray:
+    def specific_corr(self, indices: List[tuple], corr: List[int]) -> np.ndarray:
         """Set the matrix at `corr` for `indices`.
 
         Args:
-            indices (list[tuple]): indices for the matrix to be modified
-            corr (list[int]): correlations value
+            indices (List[tuple]): indices for the matrix to be modified
+            corr (List[int]): correlations value
 
         Returns:
             np.ndarray: A correlation matrix

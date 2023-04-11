@@ -6,11 +6,12 @@ import numpy as np
 def df_to_TSdf(df, ID=None, timestamp=None, dim_label=None):
     """Convert a pandas DataFrame into a TimeSeries DataFrame.
 
-    Keeps data already in DataFrame
+    By default, keeps data already in the columns of the DataFrame.
 
     """
     # dim
     df = df.copy()
+
     if "dim" in df.columns:
         dim_label = set(df["dim"])
     else:
@@ -43,7 +44,6 @@ def df_to_TSdf(df, ID=None, timestamp=None, dim_label=None):
 
 
 def np_to_TSdf(arr, df=None, ID=None, timestamp=None, dim_label=None, feature="0"):
-    """Convert a numpy array to pandas DataFrame."""
     # df
     if df is None:
         df = pd.DataFrame()
@@ -69,9 +69,8 @@ def np_to_TSdf(arr, df=None, ID=None, timestamp=None, dim_label=None, feature="0
     else:
         raise ValueError("Need a well-defined numpy array.")
 
-    # Convert DataFrame to TimeSeries format
+    # Convert DataFrame to TSdf format
     df = df_to_TSdf(df, ID=ID, timestamp=timestamp, dim_label=dim_label)
-
     return df
 
 

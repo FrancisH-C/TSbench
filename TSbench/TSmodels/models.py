@@ -1,5 +1,6 @@
 """Model module defing BaseClass and subclasses."""
 from abc import ABC, abstractmethod
+from typing import List, Dict
 
 from TSbench.TSmodels.utils.corr_mat import Corr_mat
 
@@ -33,7 +34,7 @@ class BaseModel(ABC):
         self,
         dim: int = 1,
         lag: int = None,
-        features : list[str] = ["returns"],
+        features: List[str] = ["returns"],
         rg: Generator = None,
         corr_mat: Corr_mat = None,
     ) -> None:
@@ -149,7 +150,7 @@ class ForecastingModel(BaseModel):
     @abstractmethod
     def forecast(
         self, serie: pd.DataFrame, start_index: int, T: int, retrain: bool = False
-    ) -> dict[str, np.array]:
+    ) -> Dict[str, np.array]:
         """Forecast a timeseries.
 
         Knowing `series` from `start_index`, set self.forecasted to `T`
@@ -164,7 +165,7 @@ class ForecastingModel(BaseModel):
             T (int): Number of forward forecast.
 
         Returns:
-            dict[str, np.ndarray]: Possible {key :value} outputs
+            Dict[str, np.ndarray]: Possible {key :value} outputs
                 - {"returns" : .ndarray of returns}
                 - {"vol" : np.array of vol}.
         """

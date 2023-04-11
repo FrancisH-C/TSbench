@@ -9,6 +9,7 @@ import pandas as pd
 import rpy2
 from rpy2 import robjects as ro
 
+from typing import List, Dict
 from TSbench.TSmodels import ForecastingModel
 from TSbench.TSmodels.R.Rpath import Rmodels_path
 
@@ -48,5 +49,5 @@ class rGARCH(ForecastingModel):
 
     def forecast(
         self, serie: pd.DataFrame, start_index: int, T: int, retrain: bool = False
-    ) -> dict[str, np.array]:
+    ) -> Dict[str, np.array]:
         pass

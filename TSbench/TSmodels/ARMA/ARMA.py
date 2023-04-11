@@ -2,6 +2,7 @@
 import numpy as np
 import pandas as pd
 from scipy.special import comb
+from typing import List, Dict
 
 from TSbench.TSmodels import Model
 
@@ -87,14 +88,14 @@ class ARMA(Model):
         self.drift = drift
         self.variance = variance
 
-    def generate(self, T: int) -> dict[str, np.array]:
+    def generate(self, T: int) -> Dict[str, np.array]:
         """Set self.outputs to `T` generated values using ARMA.
 
         Args:
             T (int): Number of observations to generate.
 
         Returns:
-            dict[str, np.array] : {"returns" : np.array of returns}.
+            Dict[str, np.array] : {"returns" : np.array of returns}.
         """
         # initialization
         x = np.zeros((self.dim, T))
@@ -258,11 +259,11 @@ class ARMA(Model):
         )
         return name + info
 
-    def params(self) -> dict[str, any]:
+    def params(self) -> Dict[str, any]:
         """Parameters dictonary of the ARMA model.
 
         Returns:
-            dict[str, any] : Parameters of the ARMA model.
+            Dict[str, any] : Parameters of the ARMA model.
         """
         return {
             "dim": self.dim,
@@ -298,7 +299,7 @@ class ARMA(Model):
 
     def forecast(
         self, series: pd.DataFrame = None, start_index: int = None, T: int = None, retrain: bool = False
-    ) -> dict[str, np.array]:
+    ) -> Dict[str, np.array]:
         """Forecast a timeseries.
 
         Knowing `series` from `start_index`, set self.forecasted to `T`
@@ -313,7 +314,7 @@ class ARMA(Model):
             T (int): Number of forward forecast.
 
         Returns:
-            dict[str, np.array]: Possible {key :value} outputs
+            Dict[str, np.array]: Possible {key :value} outputs
                 - {"returns" : np.array of returns}
                 - {"vol" : np.array of vol}.
         """

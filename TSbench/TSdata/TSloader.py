@@ -8,6 +8,7 @@ import multiprocessing
 from typing import Callable
 from TSbench.TSdata.DataFormat import np_to_TSdf, dict_to_TSdf, df_to_TSdf
 from TSbench.TSmodels.models import GeneratorModel, ForecastingModel, Model
+from typing import List, Dict
 
 
 class TSloader:
@@ -33,10 +34,10 @@ class TSloader:
     Args:
         path (str): Sets attribute of the same name.
         datatype (str): Sets attribute of the same name.
-        split (list[str], optional): Sets attribute of the same name.
-        subsplit_indices (list[int] , optional): The indices to use in subsplit.
+        split (List[str], optional): Sets attribute of the same name.
+        subsplit_indices (List[int] , optional): The indices to use in subsplit.
             Default is to use all the indices from the split.
-        subsplit_names (list[str] , optional): The subsplit scheme to use.
+        subsplit_names (List[str] , optional): The subsplit scheme to use.
             Default is to use the whole split.
         parallel (bool, optional): Sets attribute of the same name.
         permission (str, optional): Sets attribute of the same name.
@@ -48,7 +49,7 @@ class TSloader:
             dataset.
         df (pd.DataFrame): The pandas' dataset.
         metadata (pd.DataFrame): The pandas' metadata.
-        split (list[str], optional): A given datatype is store in a sequence of
+        split (List[str], optional): A given datatype is store in a sequence of
             splits. Used when a single datatype is too large or for
             parallelization.
         parallel (bool): Parallel informn on how to manipulate metadata.
@@ -68,9 +69,9 @@ class TSloader:
         self,
         path: str = "data",
         datatype: str = None,
-        split: list[str] = None,
-        subsplit_indices: list[int] = None,
-        subsplit_names: list[str] = None,
+        split: List[str] = None,
+        subsplit_indices: List[int] = None,
+        subsplit_names: List[str] = None,
         parallel: bool = False,
         permission: str = "overwrite",
     ) -> "TSloader":
@@ -267,11 +268,11 @@ class TSloader:
             self.metadata["datatype"] = datatype
         # else datatype is already in metadata indices
 
-    def add_metadata(self, **metadata: list[str]) -> None:
+    def add_metadata(self, **metadata: List[str]) -> None:
         """Verify if entry is already there before append.
 
         Args:
-            **metadata (list[str]):
+            **metadata (List[str]):
 
         """
         for key in metadata:
@@ -292,11 +293,11 @@ class TSloader:
         self.metadata.at[self.datatype, "IDs"] = IDs
         self.metadata.at[self.datatype, "features"] = features
 
-    def overwrite_metadata(self, **metadata: list[str]) -> None:
+    def overwrite_metadata(self, **metadata: List[str]) -> None:
         """Overwrite metadata.
 
         Args:
-            **metadata (list[str]):
+            **metadata (List[str]):
 
         Raises:
             ValueError: If permission is not overwrite.
@@ -307,15 +308,15 @@ class TSloader:
         for key in metadata:
             if key not in self.metadata.columns:
                 self.metadata[key] = ""
-            if type(metadata[key]) is not list:
+            if type(metadata[key]) is not List:
                 metadata[key] = [metadata[key]]
             self.metadata.at[self.datatype, key] = metadata[key]
 
-    def _initialize_split_metadata(self, split: list[str] = None) -> None:
+    def _initialize_split_metadata(self, split: List[str] = None) -> None:
         """Initialize split metadata.
 
         Args:
-            split (list[str], optional):
+            split (List[str], optional):
 
         Raises:
             ValueError: If split exsists and no overwrite permission is granted.
@@ -444,17 +445,17 @@ class TSloader:
     def set_datatype(
         self,
         datatype: str,
-        split: list[str] = None,
-        subsplit_indices: list[int] = None,
-        subsplit_names: list[str] = None,
+        split: List[str] = None,
+        subsplit_indices: List[int] = None,
+        subsplit_names: List[str] = None,
     ) -> None:
         """Change datatype and split used to load data.
 
         Args:
             datatype (str): The datatype to set.
-            split (list[str], optional): The split to set.
-            subsplit_indices (list[int], optional): The split indices to set.
-            subsplit_names (list[str], optional): The split names to set.
+            split (List[str], optional): The split to set.
+            subsplit_indices (List[int], optional): The split indices to set.
+            subsplit_names (List[str], optional): The split names to set.
 
         Raises:
             ValueError: If `datatype` is undefined.
@@ -468,17 +469,16 @@ class TSloader:
 
         # Initialize and set the split
         self._initialize_split_metadata(split)
-        self._set_split(subsplit_indices, subsplit_names)
-        self.split_index = 0  # start at the beginning
+        self._initialize_split(subsplit_indices, subsplit_names)
 
-    def _set_split(
-        self, subsplit_indices: list[int] = None, subsplit_names: list[str] = None
+    def _initialize_split(
+        self, subsplit_indices: List[int] = None, subsplit_names: List[str] = None
     ) -> None:
         """Set split.
 
         Args:
-            subsplit_indices (list[int], optional): The split indices to set.
-            subsplit_names (list[str], optional): The split names to set.
+            subsplit_indices (List[int], optional): The split indices to set.
+            subsplit_names (List[str], optional): The split names to set.
 
         Raises:
             ValueError: If both `subsplit_indices` and `subsplit_names`
@@ -505,15 +505,25 @@ class TSloader:
             else:
                 raise ValueError("Invalid split names.")
 
-    def reset_split_index(self) -> None:
+        if len(self.split) > 0:
+            self.split_index = 0  # start at the beginning
+            self.current_split = self.split[self.split_index]
+        else:
+            self.current_split = ""
+
+
+    def reset_split(self) -> None:
         """Reset split index to 0."""
         self.split_index = 0
+        self.current_split = self.split[self.split_index]
 
-    def next_split_index(self) -> None:
+    def next_split(self) -> None:
         """Increment split index by 1."""
         self.split_index += 1
+        if self.split_index < len(self.split):
+            self.current_split = self.split[self.split_index]
 
-    def set_split_index(self, index: int) -> None:
+    def set_split(self, index: int) -> None:
         """Set the split index.
 
         Args:
@@ -521,6 +531,7 @@ class TSloader:
 
         """
         self.split_index = index
+        self.current_split = self.split[self.split_index]
 
     def get_filename(self, prefix: str = "") -> str:
         """Get the filename to load for current datatype and split_index.
@@ -532,12 +543,7 @@ class TSloader:
             str: The filename to load for current datatype and split_index.
 
         """
-        if len(self.split) > 0:
-            filename = (
-                prefix + self.datatype + "-" + self.split[self.split_index] + ".pqt"
-            )
-        else:
-            filename = prefix + self.datatype + ".pqt"
+        filename = prefix + self.datatype + "-" + self.current_split + ".pqt"
         return self._append_path(filename)
 
     def load(self) -> pd.DataFrame:
@@ -878,5 +884,5 @@ class LoadersProcess(multiprocessing.Process):
             loader.reset_split_index()
             for split in loader.split:
                 self.function(loader)
-                loader.next_split_index()
+                loader.next_split()
 
