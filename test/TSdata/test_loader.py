@@ -25,10 +25,10 @@ def same_data(df1, df2, debug=False):
             x = df1.loc[index][feature]
             y = df2.loc[index][feature]
 
-            #if type(x) is pd.Series:
+            # if type(x) is pd.Series:
             #    print("jfdksfljd")
             #    x = x.values
-            #if type(y) is pd.Series:
+            # if type(y) is pd.Series:
             #    y = y.values
 
             if x != y:

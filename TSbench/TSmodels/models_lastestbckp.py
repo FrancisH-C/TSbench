@@ -41,7 +41,7 @@ class BaseModel(ABC):
         self.dim = dim
         self.lag = lag
 
-        if rg is None :
+        if rg is None:
             rg = Generator(Xoshiro256())
         self.rg = rg
 
@@ -369,8 +369,12 @@ class ForecastingModel(BaseModel):
         for i in range(1, len(indices) - 1):
             subset = test_set.iloc[indices[i - 1] : indices[i]]
             # use subset to forecast
-            self.forecast(subset, start_index=indices[i], T=indices[i + 1] - indices[i],
-                          retrain=retrain)
+            self.forecast(
+                subset,
+                start_index=indices[i],
+                T=indices[i + 1] - indices[i],
+                retrain=retrain,
+            )
 
         return self.forecasted
 

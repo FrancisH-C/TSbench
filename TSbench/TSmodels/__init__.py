@@ -1,5 +1,5 @@
 """Model class and implemented timeseries models."""
-import importlib.util 
+import importlib.util
 
 from TSbench.TSmodels.models import GeneratorModel, ForecastingModel, Model
 

@@ -1,10 +1,10 @@
 """Experiment module defing the class."""
-#from TSload import TSloader
+# from TSload import TSloader
 import os
 import pandas as pd
 
 
-class Experiment():
+class Experiment:
     """."""
 
     def __init__(
@@ -19,6 +19,8 @@ class Experiment():
         """."""
         self.path = path
         self.name = name
+
+
 #
 #        if loaders is None:
 #            loaders = [TSloader(path = os.path.join(path, "data"), datatype="simulated")]

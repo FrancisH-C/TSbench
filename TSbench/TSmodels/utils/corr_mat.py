@@ -24,7 +24,7 @@ class Corr_mat:
         rg: Generator = None,
         dim: int = None,
         method: str = "random",
-        **method_const
+        **method_const,
     ):
         """Initialize the correlation matrix.
 
@@ -49,7 +49,7 @@ class Corr_mat:
         if mat is not None:
             dim = np.size(mat, 0)
 
-        if rg is None :
+        if rg is None:
             rg = Generator(Xoshiro256())
         self.rg = rg
 
@@ -172,11 +172,11 @@ class Corr_mat:
 
         """
         if bias == "positive":
-            self.mat = self.mat_from_distribution(lambda : self.rg.uniform(0, 1))
+            self.mat = self.mat_from_distribution(lambda: self.rg.uniform(0, 1))
         elif bias == "neutral":
-            self.mat = self.mat_from_distribution(lambda : self.rg.uniform(-1, 1))
+            self.mat = self.mat_from_distribution(lambda: self.rg.uniform(-1, 1))
         elif bias == "negative":
-            self.mat = self.mat_from_distribution(lambda : self.rg.uniform(-1, 0))
+            self.mat = self.mat_from_distribution(lambda: self.rg.uniform(-1, 0))
         else:
             raise ValueError('`corr` is either "neutral", "positive" or "negative"')
 

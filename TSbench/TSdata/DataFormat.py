@@ -2,6 +2,7 @@
 import pandas as pd
 import numpy as np
 
+
 def df_to_TSdf(df, ID=None, timestamp=None, dim_label=None):
     """Convert a pandas DataFrame into a TimeSeries DataFrame.
 
@@ -10,11 +11,10 @@ def df_to_TSdf(df, ID=None, timestamp=None, dim_label=None):
     """
     # dim
     df = df.copy()
-    #df["dim"] = [0,0,0,0,0]
-    df = df.reset_index() # put all data in columns
-    if "index" in list(df.columns): # remove index column is it's there
+    # df["dim"] = [0,0,0,0,0]
+    df = df.reset_index()  # put all data in columns
+    if "index" in list(df.columns):  # remove index column is it's there
         df = df.drop(columns=["index"])
-
 
     if "dim" in df.columns:
         dim_label = set(df["dim"])

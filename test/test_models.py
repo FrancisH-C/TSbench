@@ -4,15 +4,20 @@ from TSbench import TSmodels
 from numpy.random import Generator
 from randomgen import Xoshiro256
 
+
 def test_simple():
     cnst_model = TSmodels.Constant(1)
     cnst_model.generate(200)["returns"]
+
+
 test_simple()
+
 
 @pytest.mark.R
 def test_R():
     """Using R packages"""
     TSmodels.rGARCH()
+
 
 def test_arma():
     """Comparisson with statmodels."""

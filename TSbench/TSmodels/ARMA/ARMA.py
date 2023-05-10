@@ -13,6 +13,7 @@ import warnings
 
 warnings.simplefilter("ignore")
 
+
 class ARMA(Model):
     """Generate outputs using the ARIMA models within a simulation.
 
@@ -43,7 +44,7 @@ class ARMA(Model):
         ma: np.array = None,
         drift: int = 0,
         variance: int = 1,
-        **model_args
+        **model_args,
     ) -> None:
         """Initialize ARMA."""
         super().__init__(**model_args)
@@ -64,12 +65,16 @@ class ARMA(Model):
             q = self.lag
         # 2.1 For the AR process with `ar` or `p`
         if ar is None:
-            ar = self.rg.uniform(low=-1, high=0, size=(self.dim, p)) / p  # (np.arange(p) + 1)
+            ar = (
+                self.rg.uniform(low=-1, high=0, size=(self.dim, p)) / p
+            )  # (np.arange(p) + 1)
             ar = np.array(ar, ndmin=2)
             ar = np.hstack((np.ones((self.dim, 1)), ar))
         # 2.2 For the MA process with `ma` or `q`
         if ma is None:
-            ma = self.rg.uniform(low=-1, high=0, size=(self.dim, q)) / q  # (np.arange(p) + 1)
+            ma = (
+                self.rg.uniform(low=-1, high=0, size=(self.dim, q)) / q
+            )  # (np.arange(p) + 1)
             ma = np.array(ma, ndmin=2)
             ma = np.hstack((np.ones((self.dim, 1)), ma))
 
@@ -102,7 +107,7 @@ class ARMA(Model):
         x = np.zeros((self.dim, T))
         z = self.rg.standard_normal(size=(self.dim, T))
 
-        #x[:, 0] = z[:, 0]
+        # x[:, 0] = z[:, 0]
         # initialize MA
         for t in range(0, self.q + 1):
             for k in range(0, self.dim):
@@ -112,7 +117,7 @@ class ARMA(Model):
         for t in range(self.q + 1, T):
             for k in range(0, self.dim):
                 x[k, t] = self.flipped_dot(self.ma[k, :], z[k, t - self.q : t + 1])
-        #x = z
+        # x = z
 
         # initialize AR
         for t in range(1, self.p + 1):
@@ -121,8 +126,8 @@ class ARMA(Model):
 
         # generate AR
         for t in range(self.p + 1, T):
-            x[:, t] = (
-                self.flipped_dot_dimension_wise(self.ar[:, :], x[:, t - self.p : t + 1])
+            x[:, t] = self.flipped_dot_dimension_wise(
+                self.ar[:, :], x[:, t - self.p : t + 1]
             )  # x_{t-i-j}
 
         self.record_outputs(returns=np.transpose(x))
@@ -299,7 +304,11 @@ class ARMA(Model):
         return self
 
     def forecast(
-        self, series: pd.DataFrame = None, start_index: int = None, T: int = None, retrain: bool = False
+        self,
+        series: pd.DataFrame = None,
+        start_index: int = None,
+        T: int = None,
+        retrain: bool = False,
     ) -> dict[str, np.array]:
         """Forecast a timeseries.
 
@@ -337,8 +346,10 @@ class ARMA(Model):
         Args:
             series (pd.DataFrame): Input series.
         """
-        if (self.sm_arma.model.endog is None or  # more complex multivariate
-                self.sm_arma.model.endog.dtype == "int64"):
+        if (
+            self.sm_arma.model.endog is None
+            or self.sm_arma.model.endog.dtype == "int64"  # more complex multivariate
+        ):
             self.sm_arma = self.sm_arma.apply(endog=series.to_numpy())
         else:
             self.sm_arma = self.sm_arma.append(endog=series.to_numpy())

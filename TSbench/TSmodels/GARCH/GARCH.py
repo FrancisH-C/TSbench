@@ -29,7 +29,7 @@ class GARCH(GeneratorModel):
         B: np.array = None,
         C: np.array = None,
         drift: int = 0,
-        **model_args
+        **model_args,
     ) -> None:
         """Initialize GARCH."""
         super().__init__(**model_args)

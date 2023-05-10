@@ -14,7 +14,7 @@ def csv2pqt(
     path: str,
     filename: str,
     process_function: callable[[pd.DataFrame], None] = None,
-    **loader_args: any
+    **loader_args: any,
 ) -> None:
     """Format a file from csv to pqt.
 
@@ -44,7 +44,7 @@ def csv2pqt(
 def dataset_csv2pqt(
     path: str,
     process_function: callable[[pd.DataFrame], None] = None,
-    **loader_args: any
+    **loader_args: any,
 ) -> None:
     """Format files in path from csv to pqt.
 

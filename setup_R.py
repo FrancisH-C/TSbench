@@ -2,7 +2,7 @@
 
 import os
 from pathlib import Path
-import importlib.util 
+import importlib.util
 
 home = Path.home()
 r_environ = os.path.join(home, ".Renviron")
@@ -10,6 +10,7 @@ r_home = os.path.join(home, ".config/R/")
 profile = os.path.join(home, ".config/R/")
 libs = os.path.join(home, ".config/R/packages/")
 histfile = os.path.join(home, ".config/R/history/")
+
 
 def install_R_package():
     if importlib.util.find_spec("rpy2") is not None:
@@ -22,9 +23,13 @@ def install_R_package():
     utils.install_packages("rmgarch", repos="https://cloud.r-project.org")
     utils.install_packages("MTS", repos="https://cloud.r-project.org")
 
+
 def R_config():
     with open(r_environ, "a") as f:
-        f.write(f"R_HOME_USER = {r_home}\nR_LIBS_USER = {libs}\nR_PROFILE_USER = {profile}\nR_HISTFILE = {histfile}")
+        f.write(
+            f"R_HOME_USER = {r_home}\nR_LIBS_USER = {libs}\nR_PROFILE_USER = {profile}\nR_HISTFILE = {histfile}"
+        )
+
 
 def R_directories():
     os.makedirs(r_home, exist_ok=True)

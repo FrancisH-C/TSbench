@@ -83,7 +83,7 @@ class TSloader:
         subsplit_pattern: list[str] = None,
         subsplit_pattern_index: list[int] = None,
         parallel: bool = False,
-        permission: str = "overwrite"
+        permission: str = "overwrite",
     ) -> "TSloader":
         """Init method."""
         # Permissions
@@ -97,9 +97,11 @@ class TSloader:
 
         # Load metadata from path
         self.load_metadata()
-        
+
         ## Set the datatype and use it to load datatype's data.
-        self.set_datatype(datatype, split_pattern, subsplit_pattern, subsplit_pattern_index)
+        self.set_datatype(
+            datatype, split_pattern, subsplit_pattern, subsplit_pattern_index
+        )
         self.df = self.load()
 
     ######################
@@ -119,12 +121,14 @@ class TSloader:
         """Create the dataset if it doesn't exsist."""
         # if path it doesn't exsist.
         if not os.path.isdir(self.path):
-            # Create path 
+            # Create path
             if self.permission != "read":
                 logging.info(f"Path '{self.path}' does not exist, creating.")
                 os.makedirs(self.path)
             else:
-                raise ValueError("To create the path, you need more than the 'read' permission")
+                raise ValueError(
+                    "To create the path, you need more than the 'read' permission"
+                )
 
     def _append_path(self, filename: str) -> str:
         """Give the filename appended with the path attribute.
@@ -245,7 +249,9 @@ class TSloader:
             self.metadata["datatype"] = datatype
         # else datatype is already in metadata indices
 
-    def _update_split_pattern_to_metadata(self, split_pattern: list[str] = None) -> None:
+    def _update_split_pattern_to_metadata(
+        self, split_pattern: list[str] = None
+    ) -> None:
         """Set split pattern in "metadata"
 
         Update split_pattern in metadata if needed, otherwise do nothing.
@@ -258,7 +264,10 @@ class TSloader:
 
         """
 
-        if split_pattern is None and "split_pattern" in self.metadata.loc[self.datatype]:
+        if (
+            split_pattern is None
+            and "split_pattern" in self.metadata.loc[self.datatype]
+        ):
             # split pattern already define and not input, do nothing
             return
 
@@ -277,8 +286,7 @@ class TSloader:
                 raise ValueError(
                     "A split_pattern already exsists. "
                     + "To force this split_pattern, you need the overwrite permission."
-            )
-
+                )
 
     def add_metadata(self, **metadata: list[str]) -> None:
         """Verify if entry is already there before append.
@@ -372,7 +380,9 @@ class TSloader:
                     split_pattern = new_metadata["split_pattern"][0]
 
                     self._add_datatype_to_metadata()
-                    self.add_metadata(split_pattern=split_pattern, IDs=IDs, features=features)
+                    self.add_metadata(
+                        split_pattern=split_pattern, IDs=IDs, features=features
+                    )
 
                 # remove metadata-* file
                 if rm:
@@ -380,7 +390,6 @@ class TSloader:
 
         if write:
             self.write_metadata()
-
 
     def toggle_parallel(self) -> None:
         """Toggle parallel option."""
@@ -479,9 +488,10 @@ class TSloader:
         df = df.loc[IDs, timestamps, dims]
         return df
 
-
     def set_subsplit_pattern(
-        self,  subsplit_pattern: list[str] = None, subsplit_pattern_index: list[int] = None
+        self,
+        subsplit_pattern: list[str] = None,
+        subsplit_pattern_index: list[int] = None,
     ) -> None:
         """Set the subsplit_pattern for the loader to act on.
 
@@ -507,7 +517,9 @@ class TSloader:
         elif subsplit_pattern_index is not None:
             split_pattern = self.metadata.at[self.datatype, "split_pattern"]
             if max(subsplit_pattern_index) < len(split_pattern):
-                self.subsplit_pattern = [split_pattern[i] for i in subsplit_pattern_index]
+                self.subsplit_pattern = [
+                    split_pattern[i] for i in subsplit_pattern_index
+                ]
             else:
                 raise ValueError("Invalid split indices.")
         else:  # subsplit_pattern is not None:
@@ -523,7 +535,6 @@ class TSloader:
         else:
             self.current_split = ""
 
-
     def reset_current_split(self) -> None:
         """Reset split index to 0."""
         self.current_split_index = 0
@@ -533,7 +544,7 @@ class TSloader:
         """Increment split index by 1."""
         self.current_split_index += 1
         if self.current_split_index < len(self.subsplit_pattern):
-            self.current_split = self.subsplit_pattern[self.current_split_index]
+            self.current_split = self.split[self.current_split_index]
 
     def set_current_split(self, new_split: int) -> None:
         """Set the split.
@@ -543,7 +554,7 @@ class TSloader:
 
         """
         self.current_split = new_split
-        self.current_split_index = split.index(new_split)
+        self.current_split_index = self.subsplit_pattern.index(new_split)
         self.load()
 
     def set_split_index(self, index: int) -> None:
@@ -652,20 +663,22 @@ class TSloader:
         model,
         path,
         datatype=None,
-        ID = None,
+        ID=None,
         dim_label: np.ndarray = None,
         timestamp: np.ndarray = None,
         collision: str = "overwrite",
-        generated = True,
-        forecast = True,
-        write = False,
+        generated=True,
+        forecast=True,
+        write=False,
     ) -> None:
         if ID is None:
             ID = repr(model)
         if dim_label is None:
             dim_label = list(map(str, np.arange(model.dim)))
         elif len(dim_label) != model.dim:
-            raise ValueError("Dimension mismatch between dim_label (`dim_labe`) and model.dim (`model.dim`)")
+            raise ValueError(
+                "Dimension mismatch between dim_label (`dim_labe`) and model.dim (`model.dim`)"
+            )
         if not forecast and not generated:
             return
 
@@ -675,24 +688,33 @@ class TSloader:
 
             loader = TSloader(path, datatype=datatype)
 
-            loader.add_ID(model.outputs, ID=ID, dim_label=dim_label,
-                                timestamp=timestamp, collision=collision)
+            loader.add_ID(
+                model.outputs,
+                ID=ID,
+                dim_label=dim_label,
+                timestamp=timestamp,
+                collision=collision,
+            )
 
         if forecast and isinstance(model, ForecastingModel) and model.forecasted != {}:
-            #print(model.forecasted)
+            # print(model.forecasted)
             print("woa")
             if datatype is None:
                 datatype = "forecast"
 
             loader = TSloader(path, datatype=datatype)
 
-            loader.add_ID(model.forecasted, ID=ID, dim_label=dim_label,
-                                timestamp=timestamp, collision=collision)
+            loader.add_ID(
+                model.forecasted,
+                ID=ID,
+                dim_label=dim_label,
+                timestamp=timestamp,
+                collision=collision,
+            )
         if write:
             loader.write()
 
         return loader
-
 
     def add_ID(
         self,
@@ -811,7 +833,7 @@ class TSloader:
             # ID in self.df, overwrite ID row
             current_ID = self.df.loc[ID].reset_index(drop=False)
             df = df.reset_index(drop=False)
-            if "index" in list(df.columns): # remove index column is it's there
+            if "index" in list(df.columns):  # remove index column is it's there
                 df = df.drop(columns=["index"])
             df_ID = df.combine_first(current_ID)
             # You need to overwrite the ID, to have same input length
@@ -867,7 +889,6 @@ class TSloader:
         self.df.drop(columns=feature, inplace=True)
         if rm_from_metadata:
             self.overwrite_metadata(features=list(self.df.columns.unique()))
-        
 
 
 class LoadersProcess(multiprocessing.Process):
@@ -903,4 +924,3 @@ class LoadersProcess(multiprocessing.Process):
             for split in loader.subsplit_pattern:
                 self.function(loader)
                 loader.current_split_next()
-

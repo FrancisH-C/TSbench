@@ -12,35 +12,35 @@ try:
 except FileNotFoundError:
     LONG_DESCRIPTION = ""
 
-install_requires = ['tqdm',
-                    'numpy',
-                    "pyarrow",
-                    'randomgen',
-                    'ESRNN',
-                    'pandas',
-                    'torch',
-                    'matplotlib',
-                    'statsmodels',
-                    'scikit-learn',
-                    'sphinx',
-                    "sphinx-automodapi",
-                    'ipywidgets',
-                    'sphinx',
-                    'furo',
-                    'nbsphinx',
-                    'ipywidgets']
+install_requires = [
+    "tqdm",
+    "numpy",
+    "pyarrow",
+    "randomgen",
+    "ESRNN",
+    "pandas",
+    "torch",
+    "matplotlib",
+    "statsmodels",
+    "scikit-learn",
+    "sphinx",
+    "sphinx-automodapi",
+    "ipywidgets",
+    "sphinx",
+    "furo",
+    "nbsphinx",
+    "ipywidgets",
+]
 
 extras_require = {
-    'test': ['pytest', 'setuptools'],
+    "test": ["pytest", "setuptools"],
 }
 
-extras_require['default'] = list(
-    set(x for lst in extras_require.values() for x in lst))
+extras_require["default"] = list(set(x for lst in extras_require.values() for x in lst))
 
-extras_require['R'] = ['rpy2[all]']
+extras_require["R"] = ["rpy2[all]"]
 
-extras_require['all'] = list(
-    set(x for lst in extras_require.values() for x in lst))
+extras_require["all"] = list(set(x for lst in extras_require.values() for x in lst))
 
 VERSION = "0.1.0"
 setup(
@@ -54,7 +54,7 @@ setup(
     url="https://github.com/FrancisH-C/TSbench.git",
     python_requires=">=3.8.0",
     extras_require=extras_require,
-    scripts=['setup_R.py'],
+    scripts=["setup_R.py"],
     packages=find_packages(),
     install_requires=install_requires,
     license="MIT",

@@ -4,9 +4,8 @@ import pytest
 
 
 def pytest_addoption(parser):
-    parser.addoption(
-        "--R", action="store_true", default=False, help="run R tests"
-    )
+    parser.addoption("--R", action="store_true", default=False, help="run R tests")
+
 
 def pytest_configure(config):
     config.addinivalue_line("markers", "R: mark test as R to run")

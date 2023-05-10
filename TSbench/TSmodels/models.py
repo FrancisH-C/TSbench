@@ -42,7 +42,7 @@ class BaseModel(ABC):
         self.dim = dim
         self.lag = lag
 
-        if rg is None :
+        if rg is None:
             rg = Generator(Xoshiro256())
         self.rg = rg
 
