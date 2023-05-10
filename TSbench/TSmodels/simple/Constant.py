@@ -1,8 +1,8 @@
 """Constant model."""
+from __future__ import annotations
 from TSbench.TSmodels.models import Model
 import numpy as np
 import pandas as pd
-from typing import List, Dict
 
 
 class Constant(Model):
@@ -15,14 +15,14 @@ class Constant(Model):
             C = self.rg.uniform(low=0, high=1, size=self.dim)
         self.C = C
 
-    def generate(self, T: int) -> Dict[str, np.array]:
+    def generate(self, T: int) -> dict[str, np.array]:
         """Set self.outputs to `T` generated values using ARMA.
 
         Args:
             T (int): Number of observations to generate.
 
         Returns:
-            Dict[str, np.array]: {key :value} outputs
+            dict[str, np.array]: {key :value} outputs
                 - {"returns"  : np.array of returns}
 
         """
@@ -44,7 +44,7 @@ class Constant(Model):
 
     def forecast(
         self, series: pd.DataFrame, start_index: int, T: int
-    ) -> Dict[str, np.array]:
+    ) -> dict[str, np.array]:
         """Forecast a timeseries.
 
         Knowing `series` from `start_index`, set self.forecasted to `T`
@@ -59,7 +59,7 @@ class Constant(Model):
             T (int): Number of forward forecast.
 
         Returns:
-            Dict[str, np.array]: Possible {key :value} outputs
+            dict[str, np.array]: Possible {key :value} outputs
                 - {"returns" : np.array of returns}
                 - {"vol" : np.array of vol}.
         """

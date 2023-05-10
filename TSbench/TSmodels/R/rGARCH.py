@@ -2,6 +2,7 @@
 # https://medium.com/analytics-vidhya/calling-r-from-python-magic-of-rpy2-d8cbbf991571
 # https://medium.com/@remycanario17/update-converting-python-dataframes-to-r-with-rpy2-59edaef63e0e
 
+from __future__ import annotations
 import os
 import numpy as np
 import pandas as pd
@@ -9,7 +10,6 @@ import pandas as pd
 import rpy2
 from rpy2 import robjects as ro
 
-from typing import List, Dict
 from TSbench.TSmodels import ForecastingModel
 from TSbench.TSmodels.R.Rpath import Rmodels_path
 
@@ -49,5 +49,5 @@ class rGARCH(ForecastingModel):
 
     def forecast(
         self, serie: pd.DataFrame, start_index: int, T: int, retrain: bool = False
-    ) -> Dict[str, np.array]:
+    ) -> dict[str, np.array]:
         pass

@@ -1,4 +1,5 @@
 """Model module defing BaseClass and subclasses."""
+from __future__ import annotations
 from math import ceil
 import numpy as np
 from TSbench.utils.corr_mat import Corr_mat
@@ -7,7 +8,6 @@ import pickle
 from sklearn.model_selection import train_test_split
 
 from abc import ABC, abstractmethod
-from typing import Union
 from numpy.random import Generator
 from randomgen import Xoshiro256
 
@@ -118,7 +118,7 @@ class GeneratorModel(BaseModel):
         id: str = None,
         dates: pd.DatetimeIndex = None,
         dimensions: int = None,
-    ) -> Union[dict[str, np.array], list[float], np.array, pd.DataFrame]:
+    ) -> dict[str, np.array] | list[float] | np.array | pd.DataFrame:
         """Get subset of outputs from the model in a given format.
 
         Args:
@@ -133,7 +133,7 @@ class GeneratorModel(BaseModel):
             dimensions (int, optional): Dimensions to return.
 
         Returns:
-            Union[dict[str, np.array], np.array,list[float], pd.DataFrame]:
+            dict[str, np.array] | np.array,list[float] | pd.DataFrame:
                 The data in the `dtype` format.
         """
         # what to return
@@ -181,7 +181,7 @@ class GeneratorModel(BaseModel):
             dimensions (int, optional): Dimensions to return.
 
         Returns:
-            Union[dict[str, np.array], np.array, list[float], pd.DataFrame]:
+            dict[str, np.array] | np.array | list[float] | pd.DataFrame:
                 The data in the `dtype` format.
         """
         output = []
@@ -211,7 +211,7 @@ class GeneratorModel(BaseModel):
             dimensions (int, optional): Dimensions to return.
 
         Returns:
-            Union[dict[str, np.array], np.array, list[float], pd.DataFrame]:
+            dict[str, np.array] | np.array | list[float] | pd.DataFrame:
                 The data in the `dtype` format.
         """
         T = list(self.outputs.values())[0].shape[0]
@@ -381,7 +381,7 @@ class ForecastingModel(BaseModel):
         id: str = None,
         dates: pd.DatetimeIndex = None,
         dimensions: int = None,
-    ) -> Union[dict[str, np.array], list[float], np.array, pd.DataFrame]:
+    ) -> dict[str, np.array] | list[float] | np.array | pd.DataFrame:
         """Get subset of forecast from the model in a given format.
 
         Args:
@@ -396,7 +396,7 @@ class ForecastingModel(BaseModel):
             dimensions (int, optional): Dimensions to return.
 
         Returns:
-            Union[dict[str, np.array], np.array, list[float], pd.DataFrame]:
+            dict[str, np.array] | np.array | list[float] | pd.DataFrame:
                 The data in the `dtype` format.
         """
         # what to return
@@ -444,7 +444,7 @@ class ForecastingModel(BaseModel):
             dimensions (int, optional): Dimensions to return.
 
         Returns:
-            Union[dict[str, np.array], np.array, list[float], pd.DataFrame]:
+            dict[str, np.array] | np.array | list[float] | pd.DataFrame:
                 The data in the `dtype` format.
         """
         output = []
@@ -474,7 +474,7 @@ class ForecastingModel(BaseModel):
             dimensions (int, optional): Dimensions to return.
 
         Returns:
-            Union[dict[str, np.array],np.array,list[float],pd.DataFrame]:
+            np.array:
                 The data in the `dtype` format.
         """
         T = list(self.forecasted.values())[0].shape[0]

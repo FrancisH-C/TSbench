@@ -1,7 +1,7 @@
 """GARCH model."""
+from __future__ import annotations
 import numpy as np
 from numpy import random as rand
-from typing import List, Dict
 
 from TSbench.TSmodels.models import GeneratorModel
 
@@ -85,14 +85,14 @@ class GARCH(GeneratorModel):
         else:
             self.C = C
 
-    def generate(self, T: int) -> Dict[str, np.array]:
+    def generate(self, T: int) -> dict[str, np.array]:
         """Generate `T` values using GARCH.
 
         Args:
             T (int): Number of observations to generate.
 
         Returns:
-            Dict[str, np.array] : {key :value} outputs
+            dict[str, np.array] : {key :value} outputs
                 - {"returns"  : np.array of returns}
                 - {"vol"  : np.array of vol}.
         """
