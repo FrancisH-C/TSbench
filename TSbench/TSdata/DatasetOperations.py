@@ -3,17 +3,17 @@
 These are example of how to format data.
 
 """
+from __future__ import annotations
 from TSbench.TSdata.TSloader import TSloader
 import os
 import pandas as pd
 import shutil
-from typing import Callable
 
 
 def csv2pqt(
     path: str,
     filename: str,
-    process_function: Callable[[pd.DataFrame], None] = None,
+    process_function: callable[[pd.DataFrame], None] = None,
     **loader_args: any
 ) -> None:
     """Format a file from csv to pqt.
@@ -21,7 +21,7 @@ def csv2pqt(
     Args:
         path (str): Path of the file.
         filename (str): Name of the file.
-        process_function (Callable[[pd.DataFrame]) : None] ) : Default is  None.
+        process_function (callable[[pd.DataFrame]) : None] ) : Default is  None.
             A function to processs the data
         **loader_args (any): Keyword arguments for the loader.
 
@@ -43,7 +43,7 @@ def csv2pqt(
 
 def dataset_csv2pqt(
     path: str,
-    process_function: Callable[[pd.DataFrame], None] = None,
+    process_function: callable[[pd.DataFrame], None] = None,
     **loader_args: any
 ) -> None:
     """Format files in path from csv to pqt.
@@ -51,7 +51,7 @@ def dataset_csv2pqt(
     Args:
         path (str): Path of the file.
         filename (str): Name of the file.
-        process_function (Callable[[pd.DataFrame]) : None] ) : Default is  None.
+        process_function (callable[[pd.DataFrame]) : None] ) : Default is  None.
             A function to processs the data
         **loader_args (any): Keyword arguments for the loader.
 

@@ -2,18 +2,23 @@
 import pandas as pd
 import numpy as np
 
-
 def df_to_TSdf(df, ID=None, timestamp=None, dim_label=None):
     """Convert a pandas DataFrame into a TimeSeries DataFrame.
 
-    By default, keeps data already in the columns of the DataFrame.
+    By default, keeps overwrite with data in the columns of the DataFrame.
 
     """
     # dim
     df = df.copy()
+    #df["dim"] = [0,0,0,0,0]
+    df = df.reset_index() # put all data in columns
+    if "index" in list(df.columns): # remove index column is it's there
+        df = df.drop(columns=["index"])
+
 
     if "dim" in df.columns:
         dim_label = set(df["dim"])
+
     else:
         if dim_label is None:
             dim_label = ["0"]
@@ -33,12 +38,23 @@ def df_to_TSdf(df, ID=None, timestamp=None, dim_label=None):
         df["timestamp"] = timestamp
 
     # ID
-    if ID is not None:
-        df["ID"] = ID
-    elif "ID" not in df.columns:
-        raise ValueError("Need an ID.")
+    if "ID" not in df.columns:
+        if ID is not None:
+            df["ID"] = ID
+        else:
+            raise ValueError("Need an ID.")
 
-    df.set_index(["ID", "timestamp", "dim"], inplace=True, drop=False)
+    # if in columns, put it in index
+    index = []
+    if "ID" in list(df.columns):
+        index.append("ID")
+    if "timestamp" in list(df.columns):
+        index.append("timestamp")
+    if "dim" in list(df.columns):
+        index.append("dim")
+
+    if len(index) > 0:
+        df.set_index(index, inplace=True)
 
     return df
 

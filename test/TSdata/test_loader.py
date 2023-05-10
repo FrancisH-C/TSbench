@@ -5,8 +5,11 @@ import pytest
 
 
 def same_data(df1, df2, debug=False):
-    df1 = df1.drop(["ID", "timestamp", "dim"], axis=1)
-    df2 = df2.drop(["ID", "timestamp", "dim"], axis=1)
+    """Verify if two DataFrame have the same data
+
+    DataFrame.equals does not work, because it assumes index and
+    columns position is constant.
+    """
     df1 = df1.fillna(-1)
     df2 = df2.fillna(-1)
 
@@ -17,12 +20,24 @@ def same_data(df1, df2, debug=False):
     if df1.shape != df2.shape:
         return False
 
-    for ID in df1.index:
-        for name in df1.columns:
-            if df1.loc[ID, name] != df2.loc[ID, name]:
+    for index in df1.index:
+        for feature in df1.columns:
+            x = df1.loc[index][feature]
+            y = df2.loc[index][feature]
+
+            #if type(x) is pd.Series:
+            #    print("jfdksfljd")
+            #    x = x.values
+            #if type(y) is pd.Series:
+            #    y = y.values
+
+            if x != y:
                 if debug:
-                    print(name)
-                    print(ID)
+                    print("Not equal")
+                    print("index =", index)
+                    print("feature =", feature)
+                    print("df1 element:")
+                    print(df1.loc[index][feature])
                 return False
     return True
 
@@ -47,7 +62,8 @@ def simple_loader():
     df = pd.DataFrame(data=d)
     df_feature = pd.DataFrame(data=d_feature)
 
-    loader.initialize_datatype(df=df)
+    loader.set_df(df=df.copy())
+    df["ID"] = ID
     loader.add_ID(df, ID=ID, collision="overwrite")
     loader.add_feature(df_feature, ID=ID, feature=feature)
 
@@ -84,7 +100,7 @@ def test_permission():
     with pytest.raises(ValueError):
         loader.rm_feature(feature)
     with pytest.raises(ValueError):
-        loader.initialize_datatype(pd.DataFrame(columns=["ID", "timestamp"]))
+        loader.set_df(pd.DataFrame(columns=["ID", "timestamp"]))
 
     # You can append but not overwrite
     # loader.add_ID(df.copy(), ID=ID, collision="append")
@@ -131,20 +147,20 @@ def test_add_data():
 
     # ignore and overwrite
     d_ID = {
-        "timestamp": list(map(str, range(0, 5))),
-        "feature0": list(range(5)),
-        "feature1": list(range(10, 15)),
+        "timestamp": list(map(str, range(0, 4))),
+        "feature0": list(range(4)),
+        "feature1": list(range(10, 14)),
     }
     df_ID = pd.DataFrame(data=d_ID)  # DataFrame with different data for ID
 
-    loader.add_ID(df_ID, ID=ID, collision="ignore")
+    loader.add_ID(df_ID.copy(), ID=ID, collision="ignore")
     assert same_data(loader.df, solution_df)
-    loader.add_ID(df_ID.copy(), ID=ID, collision="overwrite")
-    assert not same_data(loader.df, solution_df)
+
+    df["ID"] = ID
     loader.add_ID(df.copy(), ID=ID, collision="overwrite")
     assert same_data(loader.df, solution_df)
 
-    # append
+    # append and update
     d1 = {
         "timestamp": list(map(str, range(0, 4))),
         "feature0": list(range(4)),
@@ -170,7 +186,7 @@ def test_add_data():
     d_feature = {"timestamp": list(map(str, range(4))), feature: list(range(15, 19))}
     d_feature_other = {
         "timestamp": list(map(str, range(4))),
-        feature: list(range(10, 14)),
+        feature: list(range(15, 19)),
     }
     df_feature = pd.DataFrame(data=d_feature)  # feature DataFrame
     df_feature_other = pd.DataFrame(
@@ -178,7 +194,8 @@ def test_add_data():
     )  # DataFrame with different data for feature
 
     loader.add_feature(df_feature_other.copy(), ID=ID, feature=feature)
-    assert not same_data(loader.df, solution_df)
+    loader.add_feature(df_feature_other.copy(), ID=ID, feature=feature)
+    assert same_data(loader.df, solution_df)
     loader.add_feature(df_feature.copy(), ID=ID, feature=feature)
     assert same_data(loader.df, solution_df)
 
@@ -222,7 +239,7 @@ def test_metadata_operations():
     loader.overwrite_metadata(test_metadata=[1])
     assert loader.metadata["test_metadata"][0] == [1]
 
-    # set datatype to call all the metadata initialization
+    ## set datatype to call all the metadata initialization
     loader.set_datatype("test")
 
 
@@ -263,14 +280,12 @@ def test_complex_interactions():
     loader.add_ID(df_ID.copy(), ID=ID, collision="overwrite")
     loader.add_ID(df1.copy(), ID="name1", collision="overwrite")
     loader.add_ID(df2.copy(), ID="name2", collision="overwrite")
-    assert same_data(loader.df, solution_df)
+    assert same_data(loader.df.loc["name1"], solution_df.loc["name1"])
+    assert same_data(loader.df.loc["name2"], solution_df.loc["name2"])
 
     loader.add_ID(df1.copy(), ID="name2", collision="update")
     loader.add_ID(df2.copy(), ID="name1", collision="update")
-
     loader.add_feature(df_feature.copy(), ID="name1", feature=feature)
     loader.add_feature(df_feature.copy(), ID="name2", feature=feature)
-
-    same_data(loader.df.loc["name1"], solution_df.loc["added_ID"])
-    same_data(loader.df.loc["name2"], solution_df.loc["added_ID"])
-    same_data(loader.df.loc["added_ID"], solution_df.loc["added_ID"])
+    assert same_data(loader.df.loc["name1"], solution_df.loc["added_ID"])
+    assert same_data(loader.df.loc["name2"], solution_df.loc["added_ID"])

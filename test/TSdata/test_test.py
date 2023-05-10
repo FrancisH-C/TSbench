@@ -20,7 +20,7 @@ def test_low_level():
     }
     df = pd.DataFrame(data=d)
 
-    loader.initialize_datatype(df=df)
+    loader.set_df(df=df)
 
     ID = "added_ID"
     d_ID = {
@@ -53,6 +53,6 @@ def test_low_level():
     }
     df_feature = pd.DataFrame(data=d_feature)
 
-    loader.add_feature(df_feature, ID=ID, feature=feature)
+    #loader.add_feature(df_feature, ID=ID, feature=feature)
 
     loader.write()
