@@ -34,7 +34,7 @@ class BaseModel(ABC):
         self,
         dim: int = 1,
         lag: int = None,
-        features: List[str] = ["returns"],
+        features: list[str] = ["returns"],
         rg: Generator = None,
         corr_mat: Corr_mat = None,
     ) -> None:
