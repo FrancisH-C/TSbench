@@ -6,6 +6,8 @@ data/
 subset_data/
 # ignore examples' output
 examples
+# ignore TSX
+notebooks/TSX
 # ignore experiments' output
 notebooks/*/experiments/*
 notebooks/*/data/*
