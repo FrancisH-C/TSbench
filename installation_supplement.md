@@ -1,4 +1,4 @@
-# Table of Contents [[TOC_3_gh]{.smallcaps}]{.tag tag-name="TOC_3_gh"} {#table-of-contents}
+# Table of Contents
 
 -   [Dependencies](#dependencies)
     -   [Support for R](#support-for-r)
