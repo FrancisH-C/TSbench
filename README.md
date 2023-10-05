@@ -26,33 +26,7 @@ See [installation_supplement.md](installation_supplement.md) for
 information about :
 
 -   Additional dependencies for TSbench
+-   R intergration
 -   Virtual environment in Python
 
 Using a virtual environment is highly recommended.
-
-## R integration
-
-This section is used for `R` integration directly into TSbench. `rpy2`
-is the bridge to use `R` in Python. As of now, `rpy2` **is not supported
-on windows**.
-<https://rpy2.github.io/doc/latest/html/overview.html#install-installation>.
-It may work in the future or with some specific docker configuration.
-
-If this integration doesn\'t work for you, see the documentation for how
-to use outputs from external packages into TSbench.
-
-### Prerequisites
-
--   `R`: You can find details here <https://www.r-project.org/>.
--   `Fortran` : `gfortran` or `gcc-fortran` [depending on the
-    distribution](https://gcc.gnu.org/wiki/GFortranDistros)
-
-Make sure you can run the commands correctly (by settings the `$PATH`
-and restarting the terminal).
-
-### Installation and post-installation
-
-``` shell
-python -m pip install -e .[R]
-python setup_R.py
-```
