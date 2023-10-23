@@ -2,11 +2,6 @@
 
 Alpha version. Usability updates coming soon.
 
-The objective of this package is to define experiments to benchmark
-models on a given dataset by calculating various metrics. It provides
-the class `Model` and every subclasses defining the right methods can
-then be used in experiments.
-
 The purpose of this package is to define experiments for benchmarking
 models on a specified dataset by calculating various metrics. It
 includes the `Model` class, and any subclasses that define the
