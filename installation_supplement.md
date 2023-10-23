@@ -1,76 +1,99 @@
-# Table of Contents
+# Table of Contents <span class="tag" tag-name="TOC_3_gh"><span class="smallcaps">TOC_3_gh</span></span>
 
--   [Dependencies](#dependencies)
-    -   [Support for R](#support-for-r)
-    -   [Test dependencies](#test-dependencies)
-    -   [All dependencies](#all-dependencies)
--   [Windows](#windows)
-    -   [Virtual environment in Python](#virtual-environment-in-python)
-        -   [Create](#create)
-        -   [Activate](#activate)
-        -   [Add to jupyter kernels](#add-to-jupyter-kernels)
-    -   [Troubleshooting](#troubleshooting)
-        -   [`PowerShell` `virtualenv` not
-            working](#powershell-virtualenv-not-working)
-        -   [Locale settings](#locale-settings)
--   [Linux](#linux)
-    -   [Virtual environment in
-        Python](#virtual-environment-in-python-1)
-        -   [Create](#create-1)
-        -   [Activate](#activate-1)
-        -   [Add to jupyter kernels](#add-to-jupyter-kernels-1)
-    -   [R integration](#r-integration)
-        -   [Automatic setup](#automatic-setup)
-        -   [Remove](#remove)
-        -   [Manual setup](#manual-setup)
+- [Dependencies](#dependencies)
+  - [Test dependencies](#test-dependencies)
+  - [All dependencies](#all-dependencies)
+  - [R support](#r-support)
+    - [Prerequisites](#prerequisites)
+    - [Automatic setup](#automatic-setup)
+- [Windows](#windows)
+  - [Virtual environment in Python](#virtual-environment-in-python)
+    - [Create](#create)
+    - [Activate](#activate)
+    - [Add to jupyter kernels](#add-to-jupyter-kernels)
+  - [Troubleshooting](#troubleshooting)
+    - [`PowerShell` `virtualenv` not
+      working](#powershell-virtualenv-not-working)
+    - [Issue with Locale Settings in Windows (French
+      Language)](#issue-with-locale-settings-in-windows-french-language)
+- [Linux](#linux)
+  - [Virtual environment in Python](#virtual-environment-in-python-1)
+    - [Create](#create-1)
+    - [Activate](#activate-1)
+    - [Add to jupyter kernels](#add-to-jupyter-kernels-1)
+  - [More information for R support](#more-information-for-r-support)
+    - [Manual setup](#manual-setup)
+    - [Remove](#remove)
 
 # Dependencies
 
 The installation has been tested with `Python 3.10.0`.
 
-## Support for R
-
-Install R from <https://cran.r-project.org/bin/windows/base/>, you can
-find details here <https://www.r-project.org/>.
-
-As of now, `rpy2` **is not supported on windows**.
-<https://rpy2.github.io/doc/latest/html/overview.html#install-installation>
-It may work in the future or with some specific docker configuration.
-See the documentation for how to use outputs from external packages into
-TSbench.
-
-To installs `rpy2` (support for R in Python)
-
-``` shell
-pip install .[R]
-```
-
 ## Test dependencies
 
-To install `pytest` and `setuptools`.
+To install `pytest` and `setuptools`:
 
 ``` shell
-pip install .[test]
+python -m pip install .[test]
 ```
 
 ## All dependencies
 
-To install all of the above.
+To install all dependencies:
 
 ``` shell
-pip install .[all]
+python -m pip install .[all]
+```
+
+## R support
+
+\`rpy2\` serves as the bridge to use \`R\` in Python, thus TSbench. As
+of now, `rpy2` **is not supported on windows**. It may work in the
+future or with some specific docker configuration. Alternatively, see
+the documentation for how to use outputs from external packages into
+TSbench.
+
+`rpy2` serves as the bridge between `Python` and `R`, enabling its use
+within TSbench. Please note that, currently, `rpy2` is **not supported
+on Windows**. For more details, you can refer to the installation guide
+at this link:
+<https://rpy2.github.io/doc/latest/html/overview.html#install-installation>.
+
+It may become compatible in the future or with specific `Docker`
+configurations. Alternatively, you can refer to the documentation for
+instructions on how to incorporate outputs from external packages into
+TSbench.
+
+### Prerequisites
+
+- `R` For further details, please visit the official R website:
+  <https://www.r-project.org/>.
+- `Fortran` Please check your specific distribution's documentation for
+  more information. For additional guidance, you can visit the following
+  link: <https://gcc.gnu.org/wiki/GFortranDistros>.
+
+Ensure that you can run the commands correctly by settings the `$PATH`
+variable and restarting the terminal.
+
+### Automatic setup
+
+``` shell
+python -m pip install .[R]
+python setup_R.py
 ```
 
 # Windows
 
 ## Virtual environment in Python
 
-One way to setup a viratual envrionement in Python is to use `conda`.
-Here is a simple example, for details, see the official documentation
+One way to set up a virtual environment in `Python` is by using `conda`.
+For detailed instructions, please refer to the official documentation:
 <https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html>
 
-The following assumes the complete installation of Anaconda
-<https://docs.anaconda.com/free/anaconda/install/windows/>
+Please note that the following steps assume you have completed the full
+installation of Anaconda. If you haven't installed Anaconda yet, you can
+find the installation guide here: Anaconda Installation Guide for
+Windows. <https://docs.anaconda.com/free/anaconda/install/windows/>
 
 ### Create
 
@@ -80,9 +103,9 @@ conda create -n TSbench python=3.10 anaconda
 
 ### Activate
 
-On every terminal, if you want to work within the virtual environment
-you must first activate it. To activate the virtual environment you run
-the following
+When working within the virtual environment, you need to activate it in
+every terminal session. To activate the virtual environment, run the
+following command:
 
 ``` shell
 conda activate TSbench
@@ -90,7 +113,8 @@ conda activate TSbench
 
 ### Add to jupyter kernels
 
-You can add the environment to `Jupyter` with the following:
+You can add the environment to `Jupyter` by executing the following
+command:
 
 ``` shell
 python -m pip install ipykernel
@@ -102,25 +126,28 @@ python -m ipykernel install --name TSbench --user
 
 ### `PowerShell` `virtualenv` not working
 
-Set the following
+Use the following command
 
 ``` ps
 set-executionpolicy remotesigned
 ```
 
-### Locale settings
+This command allows the execution of locally created scripts while
+requiring downloaded scripts to be signed by a trusted publisher.
 
-There might be an issue with the locale when working on Windows in
-French. Changing the language to English (US) will solve the issue if
-you encounter `UTF-8 codec error`{.verbatim}.
+### Issue with Locale Settings in Windows (French Language)
+
+If you are encountering issues related to locale settings while working
+on Windows in French, changing the language to English (US) can resolve
+the problem, if you encounter a "UTF-8 codec error".
 
 # Linux
 
 ## Virtual environment in Python
 
-One way to setup a viratual envrionement in Python is to use
-`virtualenv`{.verbatim}. Here is a simple example, for details, see the
-official documentation <https://docs.python.org/3/library/venv.html>.
+One way to set up a virtual environment in `Python` is by using
+`virutalenv`. For detailed instructions, please refer to the official
+documentation: <https://docs.python.org/3/library/venv.html>.
 
 ### Create
 
@@ -131,9 +158,9 @@ python -m virtualenv -p python3 $HOME/.venv/TSbench
 
 ### Activate
 
-On every terminal, if you want to work within the virtual environment
-you must first activate it. To activate the virtual environment you run
-the following :
+When working within the virtual environment, you need to activate it in
+every terminal session. To activate the virtual environment, run the
+following command:
 
 ``` shell
 source $HOME/.venv/TSbench/bin/activate
@@ -141,7 +168,8 @@ source $HOME/.venv/TSbench/bin/activate
 
 ### Add to jupyter kernels
 
-You can add the environment to Jupyter with the following:
+You can add the environment to `Jupyter` by executing the following
+command:
 
 ``` shell
 python -m pip install ipykernel
@@ -149,32 +177,20 @@ python -m pip install ipython
 python -m ipykernel install --name TSbench --user
 ```
 
-## R integration
-
-### Automatic setup
-
-If the post-installation setup for `R`{.verbatim} doesn\'t work, make
-sure the prerequisites are met. Make sure every command can be run by
-the terminal everywhere (by setting the `$PATH`{.verbatim} and
-restarting the terminal).
-
-### Remove
-
-If you want to remove `R`{.verbatim} integration simply remove rpy2
-using
-
-``` shell
-python -m pip uninstall rpy2
-```
+## More information for R support
 
 ### Manual setup
 
-If you don\'t like `setup_R.py`{.verbatim} or if you don\'t use the
-integration with rpy2, you can use a custom R setup. Here are presented
-the steps based on `Setup_R.py`{.verbatim} as a starting point.
+If you don't like `setup~R.py` or if you don't use the integration with
+rpy2, you can use a custom R setup. Here are presented the steps based
+on `Setup_R.py` as a starting point.
 
-1.  Create the `$HOME/.Renviron`{.verbatim} file with writable library
-    path.
+If you prefer not to use `Setup_R.py`, you have the option to set a
+custom `R` setup. Below, we outline the steps, using ~Setup_R.py as a
+reference point to get started.
+
+1.  Create the \$HOME/.Renviron file and ensure it has a writable
+    library path:
 
     ``` shell
     R_HOME_USER=$HOME/.config/R
@@ -191,10 +207,18 @@ the steps based on `Setup_R.py`{.verbatim} as a starting point.
     R_HISTFILE = $R_HISTFILE" >> $HOME/.Renviron
     ```
 
-2.  Install `R` packages using `R`
+2.  Install the necessary R packages using the R environment:
 
-    ``` {.r org-language="R"}
+    ``` r
     install.packages("rugarch", repos="https://cloud.r-project.org")
     install.packages("rmgarch", repos="https://cloud.r-project.org")
     install.packages("MTS", repos="https://cloud.r-project.org")
     ```
+
+### Remove
+
+To remove `R` integration, simply uninstall `rpy2` using:
+
+``` shell
+python -m pip uninstall rpy2
+```

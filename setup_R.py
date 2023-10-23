@@ -19,6 +19,7 @@ def install_R_package():
         print("R packages not installed")
         exit()
     utils = importr("utils")
+    utils.install_packages("jsonlite", repos="https://cloud.r-project.org")
     utils.install_packages("rugarch", repos="https://cloud.r-project.org")
     utils.install_packages("rmgarch", repos="https://cloud.r-project.org")
     utils.install_packages("MTS", repos="https://cloud.r-project.org")

@@ -4,29 +4,35 @@ Alpha version. Usability updates coming soon.
 
 The objective of this package is to define experiments to benchmark
 models on a given dataset by calculating various metrics. It provides
-the class `Model`{.verbatim} and every subclasses defining the right
-methods can then be used in experiments.
+the class `Model` and every subclasses defining the right methods can
+then be used in experiments.
+
+The purpose of this package is to define experiments for benchmarking
+models on a specified dataset by calculating various metrics. It
+includes the `Model` class, and any subclasses that define the
+appropriate methods can be utilized in experiments.
 
 ## Demonstration
 
-See the following video for a presentation of the package
+Watch the accompanying video for a comprehensive presentation of the
+package in action.
 
 [![Presentation](https://img.youtube.com/vi/s0gMqWn-nXo/0.jpg)](https://www.youtube.com/watch?v=s0gMqWn-nXo)
 
 # Installation
 
-For the basic installation, open a command line into the TSbench
-directory and use the following command
+To perform the basic installation, navigate to the TSbench directory
+using the command line and execute the following command:
 
 ``` shell
-pip install .
+python -m pip install .
 ```
 
-See [installation_supplement.md](installation_supplement.md) for
-information about :
+Refer to [installation_supplement.md](installation_supplement.md) for
+detailed information on:
 
--   Additional dependencies for TSbench
--   R intergration
--   Virtual environment in Python
+- Additional dependencies required for TSbench
+- Setting up virtual environment in Python
 
-Using a virtual environment is highly recommended.
+It is strongly recommended to use a virtual environment for your Python
+installation.

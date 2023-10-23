@@ -44,8 +44,8 @@ class VEC_GARCH(GARCH):
             vol[t, :, :] = cholesky(vol[t, :, :])
             epsilon[:, t] = np.dot(vol[t, :, :], z[:, t])
 
-        self.outputs = {"returns": epsilon, "vol": vol}
-        return self.outputs
+        self.generated = {"returns": epsilon, "vol": vol}
+        return self.generated
 
     def initial_state_default(self, T: int) -> tuple[np.array, np.array]:
         """Generate inital state as zero returns and identity variance matrix.
@@ -157,9 +157,8 @@ class SPD_VEC_GARCH(VEC_GARCH):
                 "Number of translations to make matrix positive definite :",
                 translations,
             )
-
-        self.outputs = {"returns": epsilon, "vol": vol}
-        return self.outputs
+        self.generated = [np.transpose(epsilon)] + [vol[:, :, i] for i in range(self.dim)]
+        return self.generated
 
     def generate_ar(self, vol: np.array, t: int) -> np.array:
         """Generate the VEC-GARCH autoregressive process.
@@ -198,3 +197,17 @@ class SPD_VEC_GARCH(VEC_GARCH):
                 self.A[j, :, :], np.outer(epsilon[:, t - j - 1], epsilon[:, t - j - 1])
             )
         return y
+
+    def __repr__(self) -> str:
+        """ARMA info and dimension."""
+        name = super().__str__()
+        info = (
+            "("
+            + str(self.p)
+            + ", "
+            + str(self.q)
+            + ", dim="
+            + str(self.dim)
+            + ")"
+        )
+        return name + info

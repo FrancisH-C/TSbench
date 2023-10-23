@@ -1,2 +1,2 @@
 """Import public functions."""
-from TSbench.TSdata import TSloader
+from TSbench.TSdata import LoaderTSdf

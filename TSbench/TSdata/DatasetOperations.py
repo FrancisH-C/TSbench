@@ -4,7 +4,7 @@ These are example of how to format data.
 
 """
 from __future__ import annotations
-from TSbench.TSdata.TSloader import TSloader
+from TSbench.TSdata.TSloader import LoaderTSdf
 import os
 import pandas as pd
 import shutil
@@ -30,7 +30,7 @@ def csv2pqt(
     if ext != ".csv":
         raise ValueError("`Filename` should be a csv file")
 
-    loader = TSloader(path, datatype, **loader_args)
+    loader = LoaderTSdf(path=path, datatype=datatype, **loader_args)
     df = pd.read_csv(os.path.join(path, filename))
 
     # process the data
@@ -63,19 +63,19 @@ def dataset_csv2pqt(
 
 
 def merge_dataset(
-    loaders: "TSloader", merge_path: str, **merge_loader_args: any
-) -> "TSloader":
+    loaders: "LoaderTSdf", merge_path: str, **merge_loader_args: any
+) -> "LoaderTSdf":
     """Merge dataset assuming no shared dataype.
 
     The merge path needs to be distinct from the path of all loaders.
 
     Args:
-        loaders (TSloader): List of loaders to merge data on.
+        loaders (LoaderTSdf): List of loaders to merge data on.
         merge_path (str): List of loaders to merge data on.
         **merge_loader_args (any): Arguments for the outputed TSloader's constructor
 
     Returns:
-        "TSloader": TSloader instance with the metadata attribute merged.
+        "LoaderTSdf": LoaderTSdf instance with the metadata attribute merged.
 
     Raises:
         ValueError: If `merge_path` is one of `loaders` path.
@@ -84,8 +84,8 @@ def merge_dataset(
     if type(loaders) is not list:
         raise ValueError("Give a list of the loaders to merge")
 
-    merge_loader = TSloader(
-        merge_path, loaders[0].datatype, permission="overwrite", **merge_loader_args
+    merge_loader = LoaderTSdf(
+        path=merge_path, datatype=loaders[0].datatype, permission="overwrite", **merge_loader_args
     )
 
     i = 0
@@ -105,5 +105,5 @@ def merge_dataset(
                 dst = os.path.join(merge_path, filename)
                 shutil.copyfile(src, dst)
 
-    merge_loader.merge_metadata(write=True, rm=True)
+    merge_loader.merge_metadata(write_metadata=True, rm=True)
     return merge_loader

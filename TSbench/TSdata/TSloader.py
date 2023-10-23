@@ -1,17 +1,70 @@
 """Tsloader module."""
 from __future__ import annotations
+from abc import ABC, abstractmethod
 import pandas as pd
 import numpy as np
+import math
 import os
+from functools import partial
+import time
 import shutil
 import logging
 import multiprocessing
+from multiprocessing import Pool
 from typing import Callable
-from TSbench.TSdata.DataFormat import np_to_TSdf, dict_to_TSdf, df_to_TSdf
-from TSbench.TSmodels.models import GeneratorModel, ForecastingModel, Model
+from TSbench.TSdata.DataFormat import convert_to_TSdf
+
+from joblib import Parallel, delayed
+import multiprocessing
+
+class TSloader(ABC):
+    def __init__(
+        self,
+        path: str = "data/",
+        datatype: str = None,
+        split_pattern: np.array = np.array([]),
+        subsplit_pattern: np.array = np.array([]),
+        subsplit_pattern_index: np.array = np.array([]),
+        parallel: bool = False,
+        permission: str = "overwrite",
+        autoload: bool = True,
+    ) -> "TSloader":
+        """Init method."""
+        # Permissions
+        self.set_permission(permission)  # read, write, overwrite
+
+        # For parallel usage
+        self.parallel = parallel
+
+        # Set path
+        self.set_path(path)
+        # Initialize metadata
+        self.load_metadata()
+
+        ## Set the datatype
+        self.set_datatype(
+            datatype, split_pattern, subsplit_pattern, subsplit_pattern_index
+        )
+        # Initialize df
+        if autoload:
+            self.df = self.load()
+
+    ######################
+    # dataset operations #
+    ######################
+
+    def set_path(self, path: str, ensure_path=True) -> None:
+        """Set the current path.
+
+        Args:
+            path (str): The path to set.
+        """
+        self.path = path
+        if ensure_path:
+            self._create_path()
 
 
-class TSloader:
+class LoaderTSdf(TSloader):
     """Use to write, load and modify a timeseries dataset.
 
     A TSloader is assigned a path to a "dataset". Optionally, it can have a
@@ -40,10 +93,10 @@ class TSloader:
     Args:
         path (str): Sets attribute of the same name.
         datatype (str): Sets attribute of the same name.
-        split_pattern (list[str], optional): Sets attribute of the same name.
-        subsplit_pattern (list[str] , optional): The subsplit scheme to use.
+        split_pattern (np.array, optional): Sets attribute of the same name.
+        subsplit_pattern (np.array , optional): The subsplit scheme to use.
             Default is to use the whole split.
-        subsplit_pattern_index (list[int] , optional): The indices to use in subsplit.
+        subsplit_pattern_index (np.array , optional): The indices to use in subsplit.
             Default is to use all the indices from the split.
         parallel (bool, optional): Sets attribute of the same name.
         permission (str, optional): Sets attribute of the same name.
@@ -55,12 +108,12 @@ class TSloader:
             dataset.
         df (pd.DataFrame): The pandas' dataset.
         metadata (pd.DataFrame): The pandas' metadata.
-        split_pattern (list[str], optional): A given datatype is store in a sequence of
+        split_pattern (np.array, optional): A given datatype is store in a sequence of
             splits. Used when a single datatype is too large or for
             parallelization.
-        subsplit_pattern (list[str] , optional): The subsplit scheme to use.
+        subsplit_pattern (np.array , optional): The subsplit scheme to use.
             Default is to use the whole split_pattern.
-        subsplit_pattern_index (list[int] , optional): The indices to use as subsplit_pattern.
+        subsplit_pattern_index (np.narray , optional): The indices to use as subsplit_pattern.
             Default is to use all the indices from the split.
         parallel (bool): Parallel informn on how to manipulate metadata.
             Parallel must be set to True to use in parallel to be used in
@@ -68,59 +121,39 @@ class TSloader:
         permission (str): To choose between {'read', 'write', 'overwerite'},
             with an increasing level of permission for the loader. The options are :
 
+            Permission is seen as permission for operations on disk.
             - 'read' : Read only the data on disk and change it on memory.
             - 'write' : Add only new datatype and new ID. Any operation that \
                would remove or change data or metadata will raise an error.
             - 'overwrite' (default) :  Do all operations and write on disk.
 
     """
-
     def __init__(
         self,
-        path: str = "data",
-        datatype: str = None,
-        split_pattern: list[str] = None,
-        subsplit_pattern: list[str] = None,
-        subsplit_pattern_index: list[int] = None,
-        parallel: bool = False,
-        permission: str = "overwrite",
+        **TSloader_args
     ) -> "TSloader":
         """Init method."""
         # Permissions
-        self.set_permission(permission)  # read, write, overwrite
-
-        # For parallel usage
-        self.parallel = parallel
-
-        # set and create path
-        self.set_path(path)
-
-        # Load metadata from path
-        self.load_metadata()
-
-        ## Set the datatype and use it to load datatype's data.
-        self.set_datatype(
-            datatype, split_pattern, subsplit_pattern, subsplit_pattern_index
-        )
-        self.df = self.load()
+        super().__init__(**TSloader_args)
 
     ######################
     # dataset operations #
     ######################
 
-    def set_path(self, path: str) -> None:
+    def set_path(self, path: str, ensure_path=True) -> None:
         """Set the current path.
 
         Args:
             path (str): The path to set.
         """
         self.path = path
-        self._create_path()
+        if ensure_path:
+            self._create_path()
 
     def _create_path(self) -> None:
         """Create the dataset if it doesn't exsist."""
-        # if path it doesn't exsist.
-        if not os.path.isdir(self.path):
+        # if path doesn't exsist.
+        if self.path != "" and not os.path.isdir(self.path):
             # Create path
             if self.permission != "read":
                 logging.info(f"Path '{self.path}' does not exist, creating.")
@@ -178,8 +211,14 @@ class TSloader:
 
         shutil.rmtree(self.path, ignore_errors=ignore_errors)
 
+    def restart_dataset(self):
+        self.rm_dataset(ignore_errors=True)
+        self._create_path()
+
     def move_dataset(self, new_path: str) -> None:
         """Move dataset to another location.
+
+        Change the path.
 
         Args:
             new_path (str): The path where to move the data.
@@ -190,23 +229,27 @@ class TSloader:
             OSError: If `new_path` directory exsists.
 
         """
-        old_path = self.path
 
         if self.permission != "overwrite":
             raise ValueError("To move the dataset, you need 'overwrite' permission")
-        elif old_path == new_path:
-            raise ValueError(f"'{new_path}' is already the current dataset path.")
-        try:
-            shutil.move(old_path, new_path)
-            self.set_path(new_path)
-        except OSError:
+        if os.path.isdir(new_path):
             raise OSError(
                 f"'{new_path}' already exists, "
                 + "to merge dataset use `merge_dataset`."
             )
 
+        old_path = self.path
+        self.set_path(new_path)
+
+        for basename in os.listdir(old_path):
+            filename = os.path.join(old_path, basename)
+            if os.path.isfile(filename):
+                os.rename(filename, self._append_path(basename))
+
     def copy_dataset(self, new_path: str) -> None:
         """Copy dataset to another location.
+
+        Change the path.
 
         Args:
             new_path (str): The path where to copy the data.
@@ -219,18 +262,56 @@ class TSloader:
         if self.permission == "read":
             raise ValueError("To copy the dataset, you need 'write' permission")
 
-        old_path = self.path
 
-        if old_path == new_path:
             raise ValueError(f"'{new_path}' is already the current dataset path.")
-        try:
-            shutil.copytree(old_path, new_path)
-            self.set_path(new_path)
-        except OSError:
+        if os.path.isdir(new_path):
             raise OSError(
                 f"'{new_path}' already exists, "
                 + "to merge dataset use `merge_dataset`."
             )
+
+        old_path = self.path
+        self.set_path(new_path)
+
+        for basename in os.listdir(old_path):
+            filename = os.path.join(old_path, basename)
+            if os.path.isfile(filename):
+                shutil.copyfile(filename, self._append_path(basename))
+
+    def copy_datatype(self, new_path: str) -> None:
+        """Copy dataset to another location.
+
+        Args:
+            new_path (str): The path where to copy the data.
+
+        Raises:
+            ValueError: If `self.path` is equal to `new_path`.
+            OSError: If `new_path` directory exsists.
+
+        """
+        if self.permission == "read":
+            raise ValueError("To copy the dataset, you need 'write' permission")
+        if self.path == new_path:
+            raise ValueError(f"'{new_path}' is already the current dataset path.")
+
+        metadata_file = self.get_filename(self, for_metadata=True)
+
+        old_path = self.path
+        # create new path
+        self.set_path(new_path)
+
+        new_metadata_file = self.get_filename(self, for_metadata=True)
+        shutil.copyfile(metadata_file, new_metadata_file)
+
+        for split in self.get_split_pattern():
+            self.set_current_split(split, autoload=False)
+            dst = self.get_filename()
+            src = os.path.join(old_path, os.path.basename(dst))
+            shutil.copyfile(src, dst)
+
+    def list_datatypes(self) -> None:
+        """List datatypes from dataset."""
+        return  np.unique(np.array(self.metadata.index))
 
     #######################
     # metadata operations #
@@ -239,100 +320,121 @@ class TSloader:
     def _add_datatype_to_metadata(self) -> None:
         """Add the current datatype to the metadata indices."""
         if self.metadata.empty:
-            self.metadata = pd.DataFrame({"datatype": [self.datatype]})
+            self.metadata = pd.DataFrame(
+                columns=["datatype", "IDs", "features", "split_pattern"]
+            )
+            self.metadata["datatype"] = [self.datatype]
             self.metadata.set_index(["datatype"], inplace=True, drop=True)
-            self.metadata["IDs"] = [[]]
-            self.metadata["features"] = [[]]
+
+            self.metadata.at[self.datatype, "IDs"] = np.array([])
+            self.metadata.at[self.datatype, "features"] = np.array([])
+            self.metadata.at[self.datatype, "split_pattern"] = np.array([])
         elif self.datatype not in self.metadata.index:
             datatype = self.metadata.index.append(pd.Index([self.datatype]))
-            self.metadata = self.metadata.reindex(datatype, fill_value=[])
-            self.metadata["datatype"] = datatype
+            self.metadata = self.metadata.reindex(datatype, fill_value=np.array([[]]))
         # else datatype is already in metadata indices
 
     def _update_split_pattern_to_metadata(
-        self, split_pattern: list[str] = None
+        self, split_pattern: np.array = np.array([])
     ) -> None:
         """Set split pattern in "metadata"
 
         Update split_pattern in metadata if needed, otherwise do nothing.
 
         Args:
-            split_pattern (list[str], optional):
+            split_pattern (np.array, optional):
 
         Raises:
-            ValueError: If split_pattern exsists and no overwrite permission is granted.
+            ValueError: If split_pattern exists and no overwrite permission is granted.
 
         """
+        # if split_pattern is empty
+        if np.size(split_pattern) == 0:
+            if np.size(self.metadata.at[self.datatype, "split_pattern"]) != 0:
+                # split pattern already defined in metadata, do nothing
+                return
+            split_pattern = np.array([])
+        self.set_metadata(split_pattern=split_pattern)
 
-        if (
-            split_pattern is None
-            and "split_pattern" in self.metadata.loc[self.datatype]
-        ):
-            # split pattern already define and not input, do nothing
-            return
+    def set_metadata(self, **metadata: np.array):
+        """set metadata.
 
-        if split_pattern is None:
-            # split_pattern is empty
-            split_pattern = []
+        Args:
+            **metadata (np.array):
 
-        if "split_pattern" not in self.metadata.loc[self.datatype]:
-            # add the split_pattern to metadata
-            self.add_metadata(split_pattern=split_pattern)
-        else:
-            if self.permission == "overwrite":
-                # overwrite the split_pattern to metadata
-                self.overwrite_metadata(split_pattern=list(split_pattern))
-            else:
+        Raises:
+            ValueError: If permission is not overwrite.
+
+        """
+        for key in metadata:
+            if type(metadata[key]) is not np.array:
+                metadata[key] = np.array(metadata[key], ndmin=1)
+            if key not in self.metadata.columns:
+                self.metadata[key] = pd.Series(data=np.array([]))
+            elif np.size(self.metadata[key]) > 0 and self.permission != "overwrite":
                 raise ValueError(
-                    "A split_pattern already exsists. "
-                    + "To force this split_pattern, you need the overwrite permission."
+                    f"{key} already exsists in metadata. "
+                    + "To overwite it, you need the overwrite permission."
+                )
+            self.metadata.at[self.datatype, key] = metadata[key]
+
+            # if ndim and length is 1, pandas reduce it to dim to 0.
+            # This brings it back as it is suppose to be: ndim == 1.
+            if metadata[key].ndim == 1 and len(metadata[key]) == 1:
+                self.metadata = self.metadata.applymap(
+                    lambda arr: np.array(arr, ndmin=1)
                 )
 
-    def add_metadata(self, **metadata: list[str]) -> None:
+    def update_metadata_from_df(self, df=None) -> None:
+        """Update metadata using df."""
+        if df is None:
+            df = self.df
+        self.append_to_metadata(
+            IDs=np.unique(np.array(df.index.get_level_values("ID")))
+        )
+        self.append_to_metadata(features=np.array(df.columns))
+
+    def update_split_from_dataset(self) -> None:
+        """Update metadata using df."""
+        split_pattern = []
+        for filename in os.listdir(self.path):
+            if filename[0:len(self.datatype)] == self.datatype:
+                filename = os.path.splitext(filename)[0]
+                split_pattern.append(filename[len(self.datatype)+1:])
+
+        split_pattern = np.sort(split_pattern)
+        self.set_metadata(split_pattern=split_pattern)
+
+
+    def update_dataset_metadata(self) -> None:
+        """Update metadata using df."""
+        for datatype in self.list_datatypes():
+            self.set_datatype(datatype)
+            self.df = self.load()
+
+            self.update_metadata_from_df()
+            self.update_split_from_dataset()
+
+        if not self.metadata.empty:
+            self.write_metadata()
+
+    def append_to_metadata(self, **metadata: np.array) -> None:
         """Verify if entry is already there before append.
 
         Args:
-            **metadata (list[str]):
-
+            **metadata (np.array):
         """
         for key in metadata:
             if key not in self.metadata.columns:
                 self.metadata[key] = ""
                 self.metadata.at[self.datatype, key] = metadata[key]
 
-            updated_metadata = list(
-                set(np.append(self.metadata.at[self.datatype, key], [metadata[key]]))
+            updated_metadata = np.unique(
+                np.append(self.metadata.at[self.datatype, key], [metadata[key]])
             )
-            self.metadata.at[self.datatype, key] = updated_metadata
+            self.set_metadata(**{key: updated_metadata})
 
-    def update_metadata(self) -> None:
-        """Verify if entry is already there before append."""
-        IDs = list(set(self.df.index.get_level_values("ID")))
-        features = list(self.df.columns)
-
-        self.metadata.at[self.datatype, "IDs"] = IDs
-        self.metadata.at[self.datatype, "features"] = features
-
-    def overwrite_metadata(self, **metadata: list[str]) -> None:
-        """Overwrite metadata.
-
-        Args:
-            **metadata (list[str]):
-
-        Raises:
-            ValueError: If permission is not overwrite.
-
-        """
-        if self.permission != "overwrite":
-            raise ValueError("This method needs 'overwrite' permission.")
-        for key in metadata:
-            if key not in self.metadata.columns:
-                self.metadata[key] = ""
-            if type(metadata[key]) is not list:
-                metadata[key] = [metadata[key]]
-            self.metadata.at[self.datatype, key] = metadata[key]
-
-    def merge_metadata(self, write: bool = True, rm: bool = True) -> None:
+    def merge_metadata(self, write_metadata: bool = True, rm: bool = True) -> None:
         """Merge metadata between 'metadata-' file.
 
         Args:
@@ -347,7 +449,7 @@ class TSloader:
                 attribute is `True`.
 
         """
-        if self.permission == "read" and write:
+        if self.permission == "read" and self.write:
             raise ValueError(
                 "You cannot write metadata while merging " + "with 'read' permission."
             )
@@ -368,6 +470,7 @@ class TSloader:
                 "Set the parallel execution attribute " + "to `False` before merging."
             )
 
+        datatype_keep = self.datatype
         self.metadata = pd.DataFrame()
         for filename in os.listdir(self.path):
             if filename[0:9] == "metadata-":
@@ -375,12 +478,12 @@ class TSloader:
                 new_metadata = pd.read_parquet(metadata_file)
                 for datatype in new_metadata.index:
                     self.datatype = datatype
-                    features = new_metadata["features"][0]
-                    IDs = new_metadata["IDs"][0]
-                    split_pattern = new_metadata["split_pattern"][0]
-
                     self._add_datatype_to_metadata()
-                    self.add_metadata(
+                    features = new_metadata.loc[self.datatype, "features"]
+                    IDs = new_metadata.loc[self.datatype, "IDs"]
+                    split_pattern = new_metadata.loc[self.datatype, "split_pattern"]
+
+                    self.append_to_metadata(
                         split_pattern=split_pattern, IDs=IDs, features=features
                     )
 
@@ -388,8 +491,59 @@ class TSloader:
                 if rm:
                     os.remove(metadata_file)
 
-        if write:
+        self.datatype = datatype_keep
+        if write_metadata and not self.metadata.empty:
             self.write_metadata()
+
+    @staticmethod
+    def merge_splitted_files(loader, n_jobs, write_metadata: bool = True, rm: bool = True) -> None:
+        if loader.permission == "read" and write:
+            raise ValueError(
+                "You cannot write metadata while merging " + "with 'read' permission."
+            )
+        elif loader.permission != "overwrite" and rm:
+            raise ValueError(
+                "You cannot remove metadata while merging "
+                + "without 'overwrite' permission."
+            )
+        elif not loader.metadata.empty and loader.permission != "overwrite":
+            raise ValueError(
+                "Trying to merge metadata but it already exists. "
+                + "To force it, change permission to 'overwrite'."
+            )
+        if loader.parallel:
+            raise ValueError(
+                "Set the parallel execution attribute " + "to `False` before merging."
+            )
+
+        def merge_day_wise(loader, new_split):
+            merge_loader = LoaderTSdf(path=loader.path, datatype=loader.datatype)
+            merge_loader.set_metadata(split_pattern=new_split_pattern)
+            merge_loader.set_current_split(new_split)
+            for old_split in loader.get_split_pattern():
+                if old_split[split_substr_start:split_substr_end] == new_split:
+                    loader.set_current_split(old_split)
+                    merge_loader.add_data(loader.df, format_df = False, update_metadata = False)
+                    if rm:
+                        os.remove(loader.get_filename())
+            merge_loader.write(write_metadata=False)
+
+
+        # change metadata split_pattern
+        split_substr_start = 0
+        split_substr_end = 8
+        new_split_pattern = np.unique(np.array(list(map(
+                lambda split : split[split_substr_start:split_substr_end],
+                                            loader.get_split_pattern()))))
+
+        Parallel(n_jobs=n_jobs)(
+            delayed(merge_day_wise)(loader, new_split) for new_split in new_split_pattern
+        )
+
+        if write_metadata:
+            metadata_loader = LoaderTSdf(path=loader.path, datatype=loader.datatype)
+            metadata_loader.set_metadata(split_pattern=new_split_pattern)
+            metadata_loader.write_metadata()
 
     def toggle_parallel(self) -> None:
         """Toggle parallel option."""
@@ -407,7 +561,7 @@ class TSloader:
             pd.DataFrame: The pandas' metadata.
 
         """
-        metadata_file = self._append_path("metadata.pqt")
+        metadata_file = self.get_filename(for_metadata=True)
         if os.path.isfile(metadata_file):
             self.metadata = pd.read_parquet(metadata_file)
         else:
@@ -424,11 +578,7 @@ class TSloader:
         """
         if self.permission == "read":
             raise ValueError("This loader has only 'read' permission.")
-        if self.parallel:
-            metadata_file = self.get_filename("metadata-")
-        else:
-            metadata_file = self._append_path("metadata.pqt")
-        self.metadata.to_parquet(metadata_file)
+        self.metadata.to_parquet(self.get_filename(for_metadata=True))
 
     #######################
     # datatype operations #
@@ -437,24 +587,24 @@ class TSloader:
     def set_datatype(
         self,
         datatype: str,
-        split_pattern: list[str] = None,
-        subsplit_pattern: list[str] = None,
-        subsplit_pattern_index: list[int] = None,
+        split_pattern: np.array = np.array([]),
+        subsplit_pattern: np.array = np.array([]),
+        subsplit_pattern_index: np.array = np.array([]),
     ) -> None:
         """Change datatype and split_pattern used to load data.
 
         Args:
             datatype (str): The datatype to set.
-            split_pattern (list[str], optional): The split_pattern to set.
-            subsplit_pattern (list[str], optional): The subsplit names to set.
-            subsplit_pattern_index (list[int], optional): The subsplit indices to set.
+            split_pattern (np.array, optional): The split_pattern to set.
+            subsplit_pattern (np.array, optional): The subsplit names to set.
+            subsplit_pattern_index (np.array, optional): The subsplit indices to set.
 
         Raises:
             ValueError: If `datatype` is undefined.
 
         """
         if datatype is None:
-            raise ValueError("You need to define a datatype")
+            return
 
         self.datatype = datatype
 
@@ -465,33 +615,149 @@ class TSloader:
         # set subsplit_pattern for loader
         self.set_subsplit_pattern(subsplit_pattern, subsplit_pattern_index)
 
-    def get_df(self, IDs=None, timestamps=None, dims=None, crossproduct=True):
-        """Get DataFrame for the datetype.
+    def train_test_split(self, train_size=None, test_size=None, rounding="before"):
+        if train_size is None and test_size is None:
+            train_size = 0.7
+            test_size = 0.3
+        elif train_size is None:
+            train_size = 1 - test_size
+        elif test_size is None:
+            test_size = 1 - train_size
+
+        if train_size + test_size != 1:
+            raise ValueError("The sum of 'train_size' and 'test_size' must be 1.")
+
+        split_index = train_size * self.get_df().shape[0]
+        if rounding == "before":
+            split_index = math.floor(split_index)
+        elif rounding == "after":
+            split_index = math.ceil(split_index)
+
+        train = self.get_df(end_index=split_index)
+        test = self.get_df(start_index=split_index + 1)
+        return train, test
+
+    def get_df(
+        self,
+        start=None,
+        start_index=None,
+        end=None,
+        end_index=None,
+        IDs=None,
+        timestamps=None,
+        dims=None,
+        features=None,
+    ):
+        """Alias for get_timeseries
+
+        Use get_timeseries instead. About to be deprecated.
+        """
+        return self.get_timeseries(
+            start=start,
+            start_index=start_index,
+            end=end,
+            end_index=end_index,
+            IDs=IDs,
+            timestamps=timestamps,
+            dims=dims,
+            features=features,
+        )
+
+    def get_timestamp(
+        self, start=None, start_index=None, end=None, end_index=None, IDs=None
+    ):
+        """Get timestamp for the datatype."""
+        if IDs is None:
+            IDs = slice(None)
+
+        if start is not None and start_index is not None:
+            raise ValueError("Either give start or a start_index")
+        elif end is not None and end_index is not None:
+            raise ValueError("Either give end or a end_index")
+
+        # get all timestamps
+        timestamps = pd.unique(self.df.loc[IDs].index.get_level_values("timestamp"))
+        # If len(IDs) == 1, timestamps is sorted.
+        if type(IDs) is slice or len(IDs) != 1:
+            timestamps = np.sort(timestamps)
+        if start is not None:
+            start_index = timestamps.searchsorted(start)
+        if end is not None:
+            end_index = timestamps.searchsorted(end)
+
+        return timestamps[start_index:end_index]
+
+    def get_timeseries(
+        self,
+        start=None,
+        start_index=None,
+        end=None,
+        end_index=None,
+        IDs=None,
+        timestamps=None,
+        dims=None,
+        features=None,
+    ):
+        """Get DataFrame for the datatype.
+
+        Much more efficient if IDs is provided and list is short
 
         If "IDs", "timestamps" or "dims" is specify, fix that value. Otherwise
         returns the entries corrresponding to all values. The more efficient in
         memory is to have, at most, one specific fix value.
-
         """
-        df = pd.DataFrame.copy(self.df)
-        if df.empty:
-            return df
+        args = [start, start_index, end, end_index, IDs, timestamps, dims, features]
+        if self.df.empty or all(arg is None for arg in args):
+            return self.df
 
-        # define
+        # timestamps related args are not all None
+        if timestamps is None and any(arg is not None for arg in args[0:4]):
+            timestamps = self.get_timestamp(
+                start=start,
+                start_index=start_index,
+                end=end,
+                end_index=end_index,
+                IDs=IDs,
+            )
+        else:
+            timestamps = slice(None)
+
+        # What follows does self.df.loc[IDs, timestamps, dims][features], but much more quickly
         if IDs is None:
-            IDs = df.index.get_level_values("ID")
-        if timestamps is None:
-            timestamps = df.index.get_level_values("timestamp")
+            IDs = slice(None)
         if dims is None:
-            dims = df.index.get_level_values("dim")
+            dims = slice(None)
+        if features is None:
+            features = slice(None)
 
-        df = df.loc[IDs, timestamps, dims]
-        return df
+        df = self.df.loc[IDs]
+
+        # keep index information in columns
+        df = df.reset_index(drop=False)
+        df.set_index(["ID", "timestamp", "dim"], drop=False, inplace=True)
+
+        # drop ID index
+        df = df.droplevel("ID")
+        # fix and drop timestamps
+        df = df.loc[timestamps]
+        df = df.droplevel("timestamp")
+        ## fix dims
+        df = df.loc[dims]
+
+        # set index back
+        df.set_index(["ID", "timestamp", "dim"], drop=True, inplace=True)
+
+        return df[features]
+
+    def get_split_pattern(
+        self,
+    ):
+        return self.metadata.at[self.datatype, "split_pattern"]
 
     def set_subsplit_pattern(
         self,
-        subsplit_pattern: list[str] = None,
-        subsplit_pattern_index: list[int] = None,
+        subsplit_pattern: np.array = np.array([]),
+        subsplit_pattern_index: np.array = np.array([]),
     ) -> None:
         """Set the subsplit_pattern for the loader to act on.
 
@@ -499,8 +765,8 @@ class TSloader:
         split_pattern as the subsplit_pattern.
 
         Args:
-            subsplit_pattern (list[str], optional): The subsplit names to set.
-            subsplit_pattern_index (list[int], optional): The subsplit indices to set.
+            subsplit_pattern (np.array, optional): The subsplit names to set.
+            subsplit_pattern_index (np.array, optional): The subsplit indices to set.
 
         Raises:
             ValueError: If both `subsplit_pattern` and `subsplit_pattern_index`
@@ -508,13 +774,13 @@ class TSloader:
                 invalid for the data's split_pattern.
 
         """
-        if subsplit_pattern is not None and subsplit_pattern_index is not None:
+        if np.size(subsplit_pattern) != 0 and np.size(subsplit_pattern_index) != 0:
             raise ValueError(
                 "Give either subsplit_pattern or subsplit_pattern_index, not both."
             )
-        elif subsplit_pattern is None and subsplit_pattern_index is None:
+        elif np.size(subsplit_pattern) == 0 and np.size(subsplit_pattern_index) == 0:
             self.subsplit_pattern = self.metadata.at[self.datatype, "split_pattern"]
-        elif subsplit_pattern_index is not None:
+        elif np.size(subsplit_pattern_index) != 0:
             split_pattern = self.metadata.at[self.datatype, "split_pattern"]
             if max(subsplit_pattern_index) < len(split_pattern):
                 self.subsplit_pattern = [
@@ -524,29 +790,37 @@ class TSloader:
                 raise ValueError("Invalid split indices.")
         else:  # subsplit_pattern is not None:
             split_pattern = self.metadata.at[self.datatype, "split_pattern"]
-            if set(subsplit_pattern).issubset(split_pattern):
+            if set(subsplit_pattern).issubset(set(split_pattern)):
                 self.subsplit_pattern = subsplit_pattern
             else:
                 raise ValueError("Invalid split names.")
 
         if len(self.subsplit_pattern) > 0:
-            self.current_split_index = 0  # start at the beginning
-            self.current_split = self.subsplit_pattern[self.current_split_index]
+            self.current_split = self.subsplit_pattern[0]
         else:
             self.current_split = ""
 
-    def reset_current_split(self) -> None:
+    def reset_current_split(self, autoload=True) -> None:
         """Reset split index to 0."""
-        self.current_split_index = 0
-        self.current_split = self.subsplit_pattern[self.current_split_index]
+        self.current_split = self.subsplit_pattern[0]
+        if autoload:
+            self.load()
 
-    def current_split_next(self) -> None:
+    def next_current_split(self, autoload=True) -> None:
         """Increment split index by 1."""
-        self.current_split_index += 1
-        if self.current_split_index < len(self.subsplit_pattern):
-            self.current_split = self.split[self.current_split_index]
+        if type(self.subsplit_pattern) is np.ndarray:
+            split_index = np.where(self.subsplit_pattern == self.current_split)[0][0] + 1
+        elif type(self.subsplit_pattern) is list:
+            split_index = self.subsplit_pattern.index(self.current_split) + 1
+            
+        if split_index < len(self.subsplit_pattern):
+            self.current_split = self.subsplit_pattern[split_index]
+            if autoload:
+                self.load()
+        else:
+            raise IndexError("next split out of range")
 
-    def set_current_split(self, new_split: int) -> None:
+    def set_current_split(self, new_split: str, autoload=True) -> None:
         """Set the split.
 
         Args:
@@ -554,31 +828,29 @@ class TSloader:
 
         """
         self.current_split = new_split
-        self.current_split_index = self.subsplit_pattern.index(new_split)
-        self.load()
+        if autoload:
+            self.load()
 
-    def set_split_index(self, index: int) -> None:
+    def index_set_current_split(self, index: int, autoload=True) -> None:
         """Set the split index.
 
         Args:
             index (int): Value to set the current split index.
 
         """
-        self.current_split_index = index
-        self.current_split = self.subsplit_pattern[self.current_split_index]
-        self.load()
+        self.current_split = self.subsplit_pattern[index]
+        if autoload:
+            self.load()
 
-    def get_filename(self, prefix: str = "") -> str:
-        """Get the filename to load for current datatype and split_index.
+    def get_filename(self, for_metadata: bool = False) -> None:
+        if for_metadata:
+            filename = "metadata"
+            if self.parallel:
+                filename += "-" + self.datatype + "-" + self.current_split
+            filename += ".pqt"
+            return self._append_path(filename)
 
-        Args:
-            prefix (str, optional): A prefix to add to a filename.
-
-        Returns:
-            str: The filename to load for current datatype and split_index.
-
-        """
-        filename = prefix + self.datatype + "-" + self.current_split + ".pqt"
+        filename = self.datatype + "-" + self.current_split + ".pqt"
         return self._append_path(filename)
 
     def load(self) -> pd.DataFrame:
@@ -590,12 +862,16 @@ class TSloader:
         """
         filename = self.get_filename()
         if self.datatype is None or not os.path.isfile(filename):
-            self.df = pd.DataFrame()
+            self.df = pd.DataFrame(
+                index=pd.MultiIndex.from_arrays(
+                    [[], [], []], names=("ID", "timestamp", "dim")
+                )
+            )
         else:
             self.df = pd.read_parquet(filename)
         return self.df
 
-    def write(self) -> None:
+    def write(self, write_metadata=True) -> None:
         """Write datatatype's data.
 
         Raises:
@@ -609,9 +885,19 @@ class TSloader:
             raise ValueError("No defined datatype.")
 
         self.df.to_parquet(self.get_filename())
-        self.write_metadata()
 
-    def set_df(self, df: pd.DataFrame = None) -> None:
+        if write_metadata:
+            self.write_metadata()
+
+    def set_df(
+        self,
+        df: pd.DataFrame = None,
+        ID: str = None,
+        dim_label: np.ndarray = None,
+        timestamp: np.ndarray = None,
+        format_df: bool = True,
+        update_metadata: bool = True
+    ) -> None:
         """Set datatatype's DataFrame.
 
         Args:
@@ -622,16 +908,20 @@ class TSloader:
                 or `df` is not well-defined.
 
         """
-        if df is None or "ID" not in df.columns or "timestamp" not in df.columns:
-            raise ValueError("Need a well-defined DataFrame.")
-        elif len(self.df) > 0 and self.permission != "overwrite":
+        if len(self.df) > 0 and self.permission != "overwrite":
             raise ValueError(
-                "To initialize a non-empty datatype, you need 'overwrite' permission."
+                "To change a non-empty datatype, you need 'overwrite' permission."
+        )
+        if format_df:
+            df = convert_to_TSdf(
+                data=df,
+                ID=ID,
+                timestamp=timestamp,
+                dim_label=dim_label,
             )
-
-        self.df = df_to_TSdf(df)
-
-        self.update_metadata()
+        if update_metadata:
+            self.update_metadata_from_df(df)  # upate metadata
+        self.df = df
 
     def rm_datatype(self, rm_from_metadata: bool = True) -> None:
         """Remove datatatype's data.
@@ -648,8 +938,12 @@ class TSloader:
         if self.permission != "overwrite":
             raise ValueError("To remove a datatype, you need 'overwrite' permission")
         elif self.df.empty:
-            raise ValueError("Trying to remove not existing datatype.")
-        self.df = pd.DataFrame()
+            raise ValueError("Trying to remove nonexistent datatype.")
+        self.df = pd.DataFrame(
+            index=pd.MultiIndex.from_arrays(
+                [[], [], []], names=("ID", "timestamp", "dim")
+            )
+        )
 
         if rm_from_metadata:
             self.metadata.drop(self.datatype, inplace=True)
@@ -658,77 +952,29 @@ class TSloader:
     # add data to dataype #
     #######################
 
-    @staticmethod
-    def add_model(
-        model,
-        path,
-        datatype=None,
-        ID=None,
-        dim_label: np.ndarray = None,
-        timestamp: np.ndarray = None,
-        collision: str = "overwrite",
-        generated=True,
-        forecast=True,
-        write=False,
-    ) -> None:
-        if ID is None:
-            ID = repr(model)
-        if dim_label is None:
-            dim_label = list(map(str, np.arange(model.dim)))
-        elif len(dim_label) != model.dim:
-            raise ValueError(
-                "Dimension mismatch between dim_label (`dim_labe`) and model.dim (`model.dim`)"
-            )
-        if not forecast and not generated:
-            return
+    def get_IDs(self):
+        return self.metadata.loc[self.datatype,"IDs"]
 
-        if generated and isinstance(model, GeneratorModel) and model.outputs != {}:
-            if datatype is None:
-                datatype = "generated"
+    def get_dim_label(self, ID):
+        return self.get_df(IDs=[ID]).index.get_level_values("dim").unique()
 
-            loader = TSloader(path, datatype=datatype)
-
-            loader.add_ID(
-                model.outputs,
-                ID=ID,
-                dim_label=dim_label,
-                timestamp=timestamp,
-                collision=collision,
-            )
-
-        if forecast and isinstance(model, ForecastingModel) and model.forecasted != {}:
-            # print(model.forecasted)
-            print("woa")
-            if datatype is None:
-                datatype = "forecast"
-
-            loader = TSloader(path, datatype=datatype)
-
-            loader.add_ID(
-                model.forecasted,
-                ID=ID,
-                dim_label=dim_label,
-                timestamp=timestamp,
-                collision=collision,
-            )
-        if write:
-            loader.write()
-
-        return loader
-
-    def add_ID(
+    def add_data(
         self,
         data=None,
         ID: str = None,
         dim_label: np.ndarray = None,
         timestamp: np.ndarray = None,
-        collision: str = "overwrite",
+        feature_label: np.ndarray = None,
+        collision: str = "update",
+        format_df: bool = True,
+        update_metadata: bool = True
     ) -> None:
         """Add ID to datatype.
 
         Caution, it Changes df. `df`'s columns could include "ID", "timestamp",
         "dim". If they don't have either, one will be provided for them.
 
+        Quicker if ID is provided
 
 
         If no dim_label is given, assumes the number of dependent dimension is 1.
@@ -739,8 +985,8 @@ class TSloader:
             collision (str, optional): To choose between {'ignore', 'append',
                 'update', 'overwerite'}
 
-                - 'overwrite' (default) : Overwrite the value.
-                - 'update' : Updates the value.
+                - 'update' (default): Updates the value.
+                - 'overwrite' : Overwrite the value.
                 - 'ignore' : Does nothing.
                 - 'append' : Append without index verification df
                    Dangerous: could lead to multiple timestamp problem.
@@ -750,39 +996,42 @@ class TSloader:
                 overwrite data without the permisison.
 
         """
-        # format the data depending of the type
-        if type(data) is pd.DataFrame:
-            df = df_to_TSdf(data, ID=ID, timestamp=timestamp, dim_label=dim_label)
-        elif type(data) is np.ndarray:
-            df = np_to_TSdf(data, ID=ID, timestamp=timestamp, dim_label=dim_label)
-        elif type(data) is dict:
-            df = dict_to_TSdf(data, ID=ID, timestamp=timestamp, dim_label=dim_label)
-        else:
-            raise ValueError("Data is of the wrong type")
+        # format data
+        if data is None:
+            if not self.df.empty and collision == "overwrite":
+                self.df = pd.DataFrame(
+                    index=pd.MultiIndex.from_arrays(
+                        [[], [], []], names=("ID", "timestamp", "dim")
+                    )
+                )
+            return
 
-        # ID
+        if format_df:
+            df = convert_to_TSdf(
+                data,
+                ID=ID,
+                timestamp=timestamp,
+                dim_label=dim_label,
+                feature_label=feature_label,
+            )
+        else:
+            df = data
         if ID is None:
-            if "ID" in df.index.names:
-                ID = df.index.get_level_values("ID")[0]
-            else:
-                raise ValueError("Need an ID.")
+            IDs=np.unique(np.array(df.index.get_level_values("ID")))
+
+        if update_metadata:
+            self.update_metadata_from_df(df)  # upate metadata
+
+        if collision == "update" and self.permission == "overwrite":
+            self.df = df.combine_first(self.df)
+            return
 
         if ID in self.df.index:
             if collision == "ignore":
                 return
-            elif collision == "append":
-                # append all the info for the ID
-                df = pd.concat([self.df.loc[ID], df], axis=0)
-
-                # remove previous now duplicated data
-                self.df.drop(index=ID, level="ID", inplace=True)
-                self.df = pd.concat([self.df, df], axis=0)
-
-            elif collision == "update" and self.permission == "overwrite":
-                self.df = df.combine_first(self.df)
             elif collision == "overwrite" and self.permission == "overwrite":
                 self.rm_ID(ID, rm_from_metadata=False)  # Keep metadata
-                self.df = pd.concat([self.df, df], axis=0)
+                self.df = df.combine_first(self.df)
             else:
                 raise ValueError(
                     "Trying to 'overwrite' an ID without permission; "
@@ -790,8 +1039,9 @@ class TSloader:
                 )
         else:
             # Append the ID to `self.df`.
-            self.df = pd.concat([self.df, df], axis=0)
-            self.update_metadata()  # add to metadata
+            self.df = df.combine_first(self.df)
+            # faster?
+            # self.df = pd.concat([self.df, df], axis=0)
 
     def add_feature(
         self, df: pd.DataFrame = None, ID: str = None, feature: str = None
@@ -827,17 +1077,17 @@ class TSloader:
             raise ValueError("Trying to `add_feature` without 'overwrite' permission")
 
         if ID not in self.df.index:
-            # ID not in self.df, use the `add_ID` method
-            self.add_ID(df, ID)  # Metadata handled there
+            # ID not in self.df, use the `add_data` method
+            self.add_data(df, ID)  # Metadata handled there
         else:
             # ID in self.df, overwrite ID row
             current_ID = self.df.loc[ID].reset_index(drop=False)
             df = df.reset_index(drop=False)
-            if "index" in list(df.columns):  # remove index column is it's there
+            if "index" in np.array(df.columns):  # remove index column is it's there
                 df = df.drop(columns=["index"])
             df_ID = df.combine_first(current_ID)
             # You need to overwrite the ID, to have same input length
-            self.add_ID(df_ID, ID, collision="overwrite")  # Metadata handled there
+            self.add_data(df_ID, ID, collision="overwrite")  # Metadata handled there
 
     ############################
     # remove data from dataype #
@@ -865,7 +1115,7 @@ class TSloader:
         # update df
         self.df.drop(index=ID, level="ID", inplace=True)
         if rm_from_metadata:
-            self.overwrite_metadata(IDs=list(self.df.index.droplevel(1).unique()))
+            self.set_metadata(IDs=np.array(self.df.index.droplevel(1).unique()))
 
     def rm_feature(self, feature: str = None, rm_from_metadata: bool = True) -> None:
         """Remove feature to datatype.
@@ -883,16 +1133,21 @@ class TSloader:
         if self.permission != "overwrite":
             raise ValueError("To remove a feature, you need 'overwrite' permission")
         elif feature not in self.df.columns:
-            raise ValueError("Trying to remove not existing feature.")
+            raise ValueError("Trying to remove nonexistent feature.")
 
         # update df
         self.df.drop(columns=feature, inplace=True)
         if rm_from_metadata:
-            self.overwrite_metadata(features=list(self.df.columns.unique()))
+            self.set_metadata(features=np.array(self.df.columns.unique()))
 
 
-class LoadersProcess(multiprocessing.Process):
+class LoadersProcess:
     """A collection of loaders and a function to apply to them using multiprocessing.
+
+
+    Need to respect:
+    - n_procs + n_loaders <= n threads
+    - 2 * n_loaders <= n threads
 
     Args:
         loaders (TSLoader): Sets attribute of the same name.
@@ -901,26 +1156,303 @@ class LoadersProcess(multiprocessing.Process):
     Attributes:
         loaders ("TSLoader"): list of loaders to use with their split_pattern for
             multiprocessing.
-        function Callable[["TSloader"], None]): A function to apply to every split_pattern of
+        df_function Callable[["TSloader"], None]): A function to apply to every a df
+            every loaders.
+        loader_function Callable[["TSloader"], None]): A function to apply to every split_pattern of
             every loaders.
 
     """
 
-    def __init__(self, loaders: "TSloader", function: Callable[["TSloader"], None]):
+    def __init__(
+        self,
+        data_path=None,
+        output_path=None,
+        datatype="",
+        output_datatype=None,
+        n_procs=1,
+        n_loaders=1,
+        IDs=None,
+        subsplit_pattern=None,
+        loader_function: Callable[["TSloader"], None] = None,
+        df_function: Callable[[pd.DataFrame], None] = None,
+        loaders: "TSloader" = None,
+        autoload=True,
+        parallel=True,
+    ):
         """Init method."""
-        super(LoadersProcess, self).__init__()
+        def df_function_wrap(loader, IDs):
+            if type(IDs) is not list:
+                IDs = [IDs]
+            try:
+                df = loader.get_df(IDs=IDs)
+            except KeyError:
+                print(IDs, "not in ", loader.current_split, "data")
+                return
+
+            split = loader.current_split + "_" + ''.join(IDs)
+            output_loader = LoaderTSdf(path=self.output_path, datatype=self.output_datatype,
+                                        split_pattern=split, parallel=self.parallel)
+            df_function(df, output_loader)
+
+        self.set_loaders(
+            data_path=data_path,
+            datatype=datatype,
+            subsplit_pattern=subsplit_pattern,
+            n_loaders=n_loaders,
+            loaders=loaders,
+        )
+
+        self.datatype = self.loaders[0].datatype
+        self.data_path = self.loaders[0].path
+
+        if output_path is None:
+            output_path = self.data_path
+        if output_datatype is None:
+            output_datatype = self.datatype
+
+        if loader_function is None:
+            loader_function = lambda loader: None
+        if df_function is None:
+            df_function = lambda split, ID, df: None
+
+        if IDs is None:
+            IDs = self.loaders[0].get_IDs()
+
+
+        self.loader_function = loader_function
+        self.df_function = df_function_wrap
+        self.n_procs = n_procs
+        self.output_path = output_path
+        self.output_datatype = output_datatype
+        self.IDs = IDs
+        self.autoload = autoload
+        self.parallel = parallel
+
+    def run_ID(self, merge_data=False):
+        """For every ID, apply `df_function` attribute optionally in parallel."""
+        def df_ID_function(loader):
+            for split in loader.subsplit_pattern:
+                loader.set_current_split(split, autoload=self.autoload)
+                # run df_function in parallel with the available n_procs
+                if self.parallel:
+                    Parallel(n_jobs=self.n_procs)(
+                        delayed(self.df_function)(
+                            loader, IDs
+                        )
+                        for IDs in self.IDs
+                    )
+                else:
+                    for IDs in self.IDs:
+                        self.df_function(loader, IDs)
+
+        if self.parallel:
+            Parallel(n_jobs=len(self.loaders))(
+                delayed(df_ID_function)(loader) for loader in self.loaders
+            )
+        else:
+            for loader in self.loaders:
+                df_ID_function(loader)
+
+        if self.parallel and merge_data:
+            output_loader = LoaderTSdf(path=self.output_path, datatype=self.output_datatype)
+            output_loader.merge_metadata()
+            LoaderTSdf.merge_splitted_files(output_loader, len(self.loaders))
+
+        
+    def run_loader(self):
+        def loaders_split_function(loader):
+            for split in loader.subsplit_pattern:
+                loader.set_current_split(split, autoload=self.autoload)
+                self.loader_function(loader)
+
+        if self.parallel:
+            Parallel(n_jobs=len(self.loaders))(
+                delayed(loaders_split_function)(loader) for loader in self.loaders
+            )
+        else:
+            for loader in self.loaders:
+                loaders_split_function(loader) 
+
+    def set_loaders(
+        self,
+        data_path=None,
+        datatype="",
+        subsplit_pattern=None,
+        n_loaders=1,
+        loaders: "TSloader" = None,
+    ):
+        if loaders is None:
+            if data_path is None:
+                raise ValueError("Need data_path")
+            metaloader = LoaderTSdf(path=data_path, datatype=datatype)
+
+            if subsplit_pattern is None:
+                subsplit_pattern = metaloader.get_split_pattern()
+            last_split_index = len(subsplit_pattern)
+
+            if last_split_index == 0:
+                raise ValueError("split_pattern not defined.")
+            if n_loaders > last_split_index:
+                raise ValueError("n_loaders greater than length of subsplit pattern.")
+
+            loaders = []
+            for i in range(n_loaders - 1):
+                subsplit_index = slice(
+                    *[last_split_index // n_loaders * j for j in [i, i + 1]]
+                )
+                loader = LoaderTSdf(
+                    path=data_path,
+                    datatype=datatype,
+                    subsplit_pattern=subsplit_pattern[subsplit_index],
+                    autoload=False,
+                )
+                loaders.append(loader)
+            # i == n_loaders
+            subsplit_index = slice(
+                last_split_index // n_loaders * (n_loaders - 1), last_split_index
+            )
+            loader = LoaderTSdf(
+                path=data_path,
+                datatype=datatype,
+                subsplit_pattern=subsplit_pattern[subsplit_index],
+                autoload=False,
+            )
+            loaders.append(loader)
+
         self.loaders = loaders
-        self.function = function
 
-    def run(self):
-        """Multiprocessing run function.
+class LoaderTSdfCSV(LoaderTSdf):
+    def get_filename(self, for_metadata: bool = False) -> None:
+        if for_metadata:
+            filename = "metadata"
+            if self.parallel:
+                filename += "-" + self.datatype + "-" + self.current_split
+            filename += ".csv"
+            return self._append_path(filename)
 
-        For every loaders, load their split_pattern and apply the function from attribute
-        `function`.
+        filename = self.datatype + "-" + self.current_split + ".csv"
+        return self._append_path(filename)
+
+    def load_metadata(self) -> pd.DataFrame:
+        """Load datataset's metadata.
+
+        Returns:
+            pd.DataFrame: The pandas' metadata.
 
         """
-        for loader in self.loaders:
-            loader.reset_current_split()
-            for split in loader.subsplit_pattern:
-                self.function(loader)
-                loader.current_split_next()
+        metadata_file = self.get_filename(for_metadata=True)
+        if os.path.isfile(metadata_file):
+            self.metadata = pd.read_csv(metadata_file)
+        else:
+            self.metadata = pd.DataFrame()
+
+        return self.metadata
+
+    def write_metadata(self) -> None:
+        """Write datataset's metadata.
+
+        Raises:
+            ValueError: If permission is read.
+
+        """
+        if self.permission == "read":
+            raise ValueError("This loader has only 'read' permission.")
+        self.metadata.to_csv(self.get_filename(for_metadata=True))
+
+    def load(self) -> pd.DataFrame:
+        """Load datatatype's data.
+
+        Returns:
+            pd.DataFrame: The pandas' data.
+
+        """
+        filename = self.get_filename()
+        if self.datatype is None or not os.path.isfile(filename):
+            self.df = pd.DataFrame(
+                index=pd.MultiIndex.from_arrays(
+                    [[], [], []], names=("ID", "timestamp", "dim")
+                )
+            )
+        else:
+            self.df = pd.read_csv(filename)
+        return self.df
+
+    def write(self, write_metadata=True) -> None:
+        """Write datatatype's data.
+
+        Raises:
+            ValueError: If permission is only 'read' or if attribute `datatype` is not
+                defined.
+
+        """
+        if self.permission == "read":
+            raise ValueError("This loader has only 'read' permission.")
+        elif self.datatype is None:
+            raise ValueError("No defined datatype.")
+
+        self.df.to_csv(self.get_filename())
+
+        if write_metadata:
+            self.write_metadata()
+
+
+    def merge_metadata(self, write_metadata: bool = True, rm: bool = True) -> None:
+        """Merge metadata between 'metadata-' file.
+
+        Args:
+            write (bool, optional): Whether or not to write the merged metadata.
+            rm (bool, optional): Whether or not to removed all the 'metadata-' files
+                after the merge.
+
+        Raises:
+            ValueError: If trying to write metadata with 'read'
+                permission; Or if trying to remove metadata (on disk or
+                memory) without 'overwrite' permission; Or if `parallel`
+                attribute is `True`.
+
+        """
+        if self.permission == "read" and self.write:
+            raise ValueError(
+                "You cannot write metadata while merging " + "with 'read' permission."
+            )
+        elif self.permission != "overwrite" and rm:
+            raise ValueError(
+                "You cannot remove metadata while merging "
+                + "without 'overwrite' permission."
+            )
+
+        elif not self.metadata.empty and self.permission != "overwrite":
+            raise ValueError(
+                "Trying to merge metadata but it already exists. "
+                + "To force it, change permission to 'overwrite'."
+            )
+
+        if self.parallel:
+            raise ValueError(
+                "Set the parallel execution attribute " + "to `False` before merging."
+            )
+
+        datatype_keep = self.datatype
+        self.metadata = pd.DataFrame()
+        for filename in os.listdir(self.path):
+            if filename[0:9] == "metadata-":
+                metadata_file = self._append_path(filename)
+                new_metadata = pd.read_csv(metadata_file)
+                for datatype in new_metadata.index:
+                    self.datatype = datatype
+                    self._add_datatype_to_metadata()
+                    features = new_metadata.loc[self.datatype, "features"]
+                    IDs = new_metadata.loc[self.datatype, "IDs"]
+                    split_pattern = new_metadata.loc[self.datatype, "split_pattern"]
+
+                    self.append_to_metadata(
+                        split_pattern=split_pattern, IDs=IDs, features=features
+                    )
+
+                # remove metadata-* file
+                if rm:
+                    os.remove(metadata_file)
+
+        self.datatype = datatype_keep
+        if write_metadata and not self.metadata.empty:
+            self.write_metadata()

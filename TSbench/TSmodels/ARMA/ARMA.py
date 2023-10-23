@@ -1,6 +1,7 @@
 """ARMA model."""
 from __future__ import annotations
 import numpy as np
+from TSbench.TSmodels.data import Data
 import pandas as pd
 from scipy.special import comb
 
@@ -19,7 +20,7 @@ class ARMA(Model):
 
     Args:
         p (int): Lag for the autoregressive process.
-        d (int): Specifies how many times to difference the time series.
+        d (int): Specifies how many times to difference the timeseries.
                  Default is 0.
         q (int): Lag for the moving average process.
         ar (np.array): Field to specify weigths of the autoregressive process.
@@ -47,8 +48,7 @@ class ARMA(Model):
         **model_args,
     ) -> None:
         """Initialize ARMA."""
-        super().__init__(**model_args)
-
+        super().__init__(default_features = ["returns"], **model_args)
         if self.lag is None and (
             (p is None and ar is None) or (q is None and ma is None)
         ):
@@ -94,44 +94,56 @@ class ARMA(Model):
         self.drift = drift
         self.variance = variance
 
-    def generate(self, T: int) -> dict[str, np.array]:
-        """Set self.outputs to `T` generated values using ARMA.
+    def generate(
+        self, N: int, reset_timestamp=False, collision: str = "overwrite"
+    ) -> Constant:
+        """Generate `T` values using Constant.
+
+        Set self.data to the generated values.
 
         Args:
             T (int): Number of observations to generate.
 
         Returns:
-            dict[str, np.array] : {"returns" : np.array of returns}.
+            np.array: returns
         """
-        # initialization
-        x = np.zeros((self.dim, T))
-        z = self.rg.standard_normal(size=(self.dim, T))
+        # initial value
+        initial = self.get_data()
+        x = np.zeros((N - initial.shape[0], self.dim))
+        if initial.size != 0:
+            # add initial to x
+            x = np.concatenate((initial, x), axis=0)
+
+        # x is the transpose the feature
+        x = np.transpose(x)
+
+        # random noise
+        z = self.rg.standard_normal(size=(self.dim, N))
 
         # x[:, 0] = z[:, 0]
         # initialize MA
         for t in range(0, self.q + 1):
             for k in range(0, self.dim):
-                x[k, t] = self.flipped_dot(self.ma[k, 0 : t + 1], z[k, 0 : t + 1])
+                x[k, t] += self.flipped_dot(self.ma[k, 0 : t + 1], z[k, 0 : t + 1])
 
         # generate MA
-        for t in range(self.q + 1, T):
+        for t in range(self.q + 1, N):
             for k in range(0, self.dim):
-                x[k, t] = self.flipped_dot(self.ma[k, :], z[k, t - self.q : t + 1])
+                x[k, t] += self.flipped_dot(self.ma[k, :], z[k, t - self.q : t + 1])
         # x = z
 
         # initialize AR
         for t in range(1, self.p + 1):
             for k in range(0, self.dim):
-                x[k, t] = self.flipped_dot(self.ar[k, 0 : t + 1], x[k, 0 : t + 1])
+                x[k, t] += self.flipped_dot(self.ar[k, 0 : t + 1], x[k, 0 : t + 1])
 
         # generate AR
-        for t in range(self.p + 1, T):
-            x[:, t] = self.flipped_dot_dimension_wise(
+        for t in range(self.p + 1, N):
+            x[:, t] += self.flipped_dot_dimension_wise(
                 self.ar[:, :], x[:, t - self.p : t + 1]
             )  # x_{t-i-j}
 
-        self.record_outputs(returns=np.transpose(x))
-        return self.outputs
+        return self.set_data(data=np.transpose(x))
 
     def flipped_dot_dimension_wise(self, a: np.array, b: np.array) -> np.array:
         """Calculate the dot product of two vectors.
@@ -249,21 +261,23 @@ class ARMA(Model):
         else:
             return 0
 
-    def __repr__(self) -> str:
+    def __str__(self) -> str:
         """ARMA info and dimension."""
-        name = super().__str__()
-        info = (
-            "("
-            + str(self.p)
-            + ", "
-            + str(self.d)
-            + ", "
-            + str(self.q)
-            + ", dim="
-            + str(self.dim)
-            + ")"
-        )
-        return name + info
+        if self._name is None:
+            name = super().__str__()
+            info = (
+                "("
+                + str(self.p)
+                + ","
+                + str(self.d)
+                + ","
+                + str(self.q)
+                + ",dim="
+                + str(self.dim)
+                + ")"
+            )
+            self._name = name + info
+        return self._name
 
     def params(self) -> dict[str, any]:
         """Parameters dictonary of the ARMA model.
@@ -282,21 +296,21 @@ class ARMA(Model):
             "ma": self.ma,
         }
 
-    def train(self, series: pd.DataFrame) -> "ARMA":
+    def train(self, collision = "overwrite") -> "ARMA":
         """Train model using `series` as the trainning set.
 
         Args:
-            series (pd.DataFrame): Input series.
+            series (np.array): Input series.
 
         Returns:
             Model: Trained ARMA model.
 
         """
         if self.dim == 1:
-            self.sm_arma = ARIMA(series, order=(self.p, self.d, self.q)).fit()
+            self.sm_arma = ARIMA(self.get_data(format=np.ndarray), order=(self.p, self.d, self.q)).fit()
             self.sm_arma.remove_data()
         else:
-            self.sm_arma = sm.tsa.VARMAX(series, order=(self.p, self.q)).fit(disp=False)
+            self.sm_arma = sm.tsa.VARMAX(self.get_data(format=np.ndarray), order=(self.p, self.q)).fit(disp=False)
             # `remove_data` cause en error whenever apply is reused later
             # to get the data back. This is why this is used instead.
             removed = np.empty((1, self.dim), dtype=int)
@@ -305,18 +319,17 @@ class ARMA(Model):
 
     def forecast(
         self,
-        series: pd.DataFrame = None,
-        start_index: int = None,
-        T: int = None,
-        retrain: bool = False,
-    ) -> dict[str, np.array]:
+        T: int,
+        reset_timestamp=False,
+        collision: str = "overwrite",
+    ) -> Data:
         """Forecast a timeseries.
 
-        Knowing `series` from `start_index`, set self.forecasted to `T`
-        forecasted values.
+        Knowing `series` from `start_index`, set self.data to `T`
+        forecast values.
 
         Args:
-            series (pd.DataFrame): Input series.
+            series (np.array): Input series.
             start_index (int): Index corresponding to the series.
                 starting point in a rolling forecast. E.g. With a 100 rate
                 rolling window. `start_index` will increment by a 100 on
@@ -328,28 +341,22 @@ class ARMA(Model):
                 - {"returns" : np.array of returns}
                 - {"vol" : np.array of vol}.
         """
-        # update model with most recent available series
-        self.append(series)
+        def sm_append(self):
+            """Append a serie to statsmodel endog variable."""
+            if (
+                self.sm_arma.model.endog is None
+                or self.sm_arma.model.endog.dtype == "int64"  # more complex multivariate
+            ):
+                self.sm_arma = self.sm_arma.apply(endog=self.get_data(format=np.ndarray))
+            else:
+                self.sm_arma = self.sm_arma.append(endog=self.get_data(format=np.ndarray))
+
+            return
+        # update sm model with most recent available series
+        sm_append(self)
 
         forecast = self.sm_arma.forecast(T)
 
         # numpy idiosyncratic detail :
         # (n,) array \neq (n,1) array, hence the reshape
-        forecast = forecast.reshape(-1, self.dim)
-
-        self.record_forecast(start_index, returns=forecast)
-        return self.forecasted
-
-    def append(self, series):
-        """Append a serie to statsmodel endog variable.
-
-        Args:
-            series (pd.DataFrame): Input series.
-        """
-        if (
-            self.sm_arma.model.endog is None
-            or self.sm_arma.model.endog.dtype == "int64"  # more complex multivariate
-        ):
-            self.sm_arma = self.sm_arma.apply(endog=series.to_numpy())
-        else:
-            self.sm_arma = self.sm_arma.append(endog=series.to_numpy())
+        return self.set_data(data=forecast.reshape(-1, self.dim), reset_timestamp=reset_timestamp, collision=collision)

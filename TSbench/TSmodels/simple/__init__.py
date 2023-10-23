@@ -1,1 +1,1 @@
-from TSbench.TSmodels.simple.Constant import Constant
+from TSbench.TSmodels.simple.constant import Constant

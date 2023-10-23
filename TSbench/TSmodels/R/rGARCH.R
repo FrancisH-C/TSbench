@@ -2,7 +2,6 @@
 
 suppressMessages(suppressWarnings(library(rugarch)))
 
-
 train_ruGARCH <- function(series, alpha_lag, beta_lag){
     #' This function returns trained GARCH model's parameters
     #'

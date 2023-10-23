@@ -32,7 +32,9 @@ class GARCH(GeneratorModel):
         **model_args,
     ) -> None:
         """Initialize GARCH."""
-        super().__init__(**model_args)
+        super().__init__(**model_args, default_features=["returns", "vol"])
+        if len(self.feature_label) != 2 * self.dim:
+            raise ValueError("Need 'feature_label' with `self.dim + 1` entries")
 
         # parameters for the model
         if self.lag is None and (A is None or B is None):
@@ -85,7 +87,7 @@ class GARCH(GeneratorModel):
         else:
             self.C = C
 
-    def generate(self, T: int) -> dict[str, np.array]:
+    def generate(self,  T: int, timeseries: tuple(np.array, np.array) = None, collision: str ="overwrite") -> tuple(np.array, np.array):
         """Generate `T` values using GARCH.
 
         Args:
@@ -96,6 +98,7 @@ class GARCH(GeneratorModel):
                 - {"returns"  : np.array of returns}
                 - {"vol"  : np.array of vol}.
         """
+        self.set_timeseries(timeseries=timeseries)
         epsilon = np.zeros(T)
         vol = np.ones(T)
         z = rand.standard_normal(T)
@@ -107,8 +110,7 @@ class GARCH(GeneratorModel):
             )
             epsilon[t] = vol[t] * z[t]
 
-        self.outputs = {"returns": epsilon.reshape(T, 1), "vol": vol.reshape(T, 1)}
-        return self.outputs
+        return self.set_timeseries(observations=[epsilon.reshape(T, 1), vol.reshape(T, 1)], collision=collision)
 
     def generate_ar(self, vol: np.array, t: int) -> np.array:
         """Generate the GARCH autoregressive process with lagged values.

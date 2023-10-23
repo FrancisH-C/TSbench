@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
-from TSbench.TSdata import TSloader, DataFormat, DatasetOperations
+import os, shutil
+from TSbench.TSdata import LoaderTSdf, DataFormat, DatasetOperations, LoaderTSdfCSV
 import pytest
 
 
@@ -47,7 +48,7 @@ def simple_loader():
     path = "data/test_add"
     datatype = "simulated"
     permission = "overwrite"
-    loader = TSloader(path, datatype, permission=permission)
+    loader = LoaderTSdf(path=path, datatype=datatype, permission=permission)
 
     ID = "added_ID"
     feature = "added_feature"
@@ -64,10 +65,38 @@ def simple_loader():
 
     loader.set_df(df=df.copy())
     df["ID"] = ID
-    loader.add_ID(df, ID=ID, collision="overwrite")
+    loader.add_data(df, ID=ID, collision="overwrite")
     loader.add_feature(df_feature, ID=ID, feature=feature)
 
     return loader
+
+def test_loaderCSV():
+    """Simple loader for test."""
+    path = "data/test_CSV"
+    datatype = "simulated"
+    permission = "overwrite"
+    loader = LoaderTSdfCSV(path=path, datatype=datatype, permission=permission)
+
+    ID = "added_ID"
+    feature = "added_feature"
+
+    d = {
+        "ID": np.hstack((["name1" for _ in range(5)], ["name2" for _ in range(5)])),
+        "timestamp": list(map(str, range(0, 10))),
+        "feature0": list(range(10)),
+        "feature1": list(range(10, 20)),
+    }
+    d_feature = {"timestamp": list(map(str, range(4))), feature: list(range(15, 19))}
+    df = pd.DataFrame(data=d)
+    df_feature = pd.DataFrame(data=d_feature)
+
+    loader.set_df(df=df.copy())
+    df["ID"] = ID
+    loader.add_data(df, ID=ID, collision="overwrite")
+    loader.add_feature(df_feature, ID=ID, feature=feature)
+
+    loader.write()
+    loader.load()
 
 
 def test_permission():
@@ -103,27 +132,30 @@ def test_permission():
         loader.set_df(pd.DataFrame(columns=["ID", "timestamp"]))
 
     # You can append but not overwrite
-    # loader.add_ID(df.copy(), ID=ID, collision="append")
+    # loader.add_data(df.copy(), ID=ID, collision="append")
     # with pytest.raises(ValueError):
-    #    loader.add_ID(df.copy(), ID=ID, collision="overwrite")
+    #    loader.add_data(df.copy(), ID=ID, collision="overwrite")
     # with pytest.raises(ValueError):
     #    loader.add_feature(df.copy(), ID=ID, feature=feature)
 
 
 def test_dataset_operations():
-    loader = simple_loader()
-    loader_other = simple_loader()
+    path = "data/test_dataset_operations/"
+    copy_path = "data/test_dataset_operations/copy/"
+    move_path = "data/test_dataset_operations/move/"
+    merge_path = "data/test_dataset_operations/merge/"
 
-    loader.set_path("data")
+    loader = LoaderTSdf(path=path, datatype="test")
+    loader_other = LoaderTSdf(path=path ,datatype="test")
+
     loader.rm_dataset()
-    loader.set_path("data/test_tmp")
     loader._create_path()
     loader.write()
 
-    loader.move_dataset("data/test_dataset")
-    loader_other.set_path("data/test_dataset")
-    loader.copy_dataset("data/test_copy")
-    DatasetOperations.merge_dataset([loader, loader_other], "data/test_merge")
+    loader.move_dataset(move_path)
+    loader.copy_dataset(copy_path)
+    loader_other.set_path(copy_path)
+    DatasetOperations.merge_dataset([loader, loader_other], merge_path)
 
 
 def test_add_data():
@@ -132,7 +164,7 @@ def test_add_data():
     solution_df = loader.df.copy()
 
     ##########
-    # add_ID #
+    # add_data #
     ##########
     ID = "added_ID"
     feature = "added_feature"
@@ -153,11 +185,11 @@ def test_add_data():
     }
     df_ID = pd.DataFrame(data=d_ID)  # DataFrame with different data for ID
 
-    loader.add_ID(df_ID.copy(), ID=ID, collision="ignore")
+    loader.add_data(df_ID.copy(), ID=ID, collision="ignore")
     assert same_data(loader.df, solution_df)
 
     df["ID"] = ID
-    loader.add_ID(df.copy(), ID=ID, collision="overwrite")
+    loader.add_data(df.copy(), ID=ID, collision="overwrite")
     assert same_data(loader.df, solution_df)
 
     # append and update
@@ -176,8 +208,8 @@ def test_add_data():
     df1 = pd.DataFrame(data=d1)  # first half of the data
     df2 = pd.DataFrame(data=d2)  # second half of the data
 
-    loader.add_ID(df1.copy(), ID=ID, collision="overwrite")
-    loader.add_ID(df2.copy(), ID=ID, collision="update")
+    loader.add_data(df1.copy(), ID=ID, collision="overwrite")
+    loader.add_data(df2.copy(), ID=ID, collision="update")
     assert same_data(loader.df, solution_df)
 
     ###############
@@ -223,20 +255,20 @@ def test_metadata_operations():
 
     # add
     # list or no list input
-    loader.add_metadata(test_metadata=1)
+    loader.append_to_metadata(test_metadata=1)
     assert loader.metadata["test_metadata"][0] == [1]
-    loader.add_metadata(test_metadata=[1])
+    loader.append_to_metadata(test_metadata=[1])
     assert loader.metadata["test_metadata"][0] == [1]
     # different value add
-    loader.add_metadata(test_metadata=2)
-    loader.add_metadata(test_metadata=[3])
-    assert loader.metadata["test_metadata"][0] == [1, 2, 3]
+    loader.append_to_metadata(test_metadata=2)
+    loader.append_to_metadata(test_metadata=[3])
+    assert (loader.metadata["test_metadata"][0] == [1, 2, 3]).all()
 
     # overwrite
     # list or no list input
-    loader.overwrite_metadata(test_metadata=1)
+    loader.set_metadata(test_metadata=1)
     assert loader.metadata["test_metadata"][0] == [1]
-    loader.overwrite_metadata(test_metadata=[1])
+    loader.set_metadata(test_metadata=[1])
     assert loader.metadata["test_metadata"][0] == [1]
 
     ## set datatype to call all the metadata initialization
@@ -277,14 +309,14 @@ def test_complex_interactions():
     df2 = pd.DataFrame(data=d2)  # name2 DataFrame
     df_feature = pd.DataFrame(data=d_feature)  # added_feature DataFrame
 
-    loader.add_ID(df_ID.copy(), ID=ID, collision="overwrite")
-    loader.add_ID(df1.copy(), ID="name1", collision="overwrite")
-    loader.add_ID(df2.copy(), ID="name2", collision="overwrite")
+    loader.add_data(df_ID.copy(), ID=ID, collision="overwrite")
+    loader.add_data(df1.copy(), ID="name1", collision="overwrite")
+    loader.add_data(df2.copy(), ID="name2", collision="overwrite")
     assert same_data(loader.df.loc["name1"], solution_df.loc["name1"])
     assert same_data(loader.df.loc["name2"], solution_df.loc["name2"])
 
-    loader.add_ID(df1.copy(), ID="name2", collision="update")
-    loader.add_ID(df2.copy(), ID="name1", collision="update")
+    loader.add_data(df1.copy(), ID="name2", collision="update")
+    loader.add_data(df2.copy(), ID="name1", collision="update")
     loader.add_feature(df_feature.copy(), ID="name1", feature=feature)
     loader.add_feature(df_feature.copy(), ID="name2", feature=feature)
     assert same_data(loader.df.loc["name1"], solution_df.loc["added_ID"])
