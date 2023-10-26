@@ -1,5 +1,6 @@
 # no images
 .png
+.pqt
 
 # ignore simulted data
 data/
