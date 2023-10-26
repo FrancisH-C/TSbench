@@ -1,0 +1,189 @@
+#    -*- mode: org -*-
+
+
+Archived entries from file /home/ganon/Projects/phd/TSbench/test/test_models.org
+
+
+* Test model's data I/0
+:PROPERTIES:
+:ARCHIVE_TIME: 2023-09-18 Mon 16:29
+:ARCHIVE_FILE: ~/Projects/phd/TSbench/test/test_models.org
+:ARCHIVE_OLPATH: Test models
+:ARCHIVE_CATEGORY: test_models
+:END:
+
+#+begin_src jupyter-python :display text/plain :session py :async yes :kernel Main
+def test_simple():
+    seed = 1234
+    N = 10
+    T = 5
+    feature_label = ["feature"]
+    rg = Generator(PCG64(seed))
+    # loader
+    path = "data/"
+    datatype = "simulated"
+    loader = LoaderTSdf(path=path, datatype=datatype)
+    # Simple model
+    cnst_model = TSmodels.Constant(dim=1, rg=rg,
+                                feature_label=feature_label)
+    # generate
+    cnst_model.generate(N, data=[0, 1, 2])
+    ID = str(cnst_model)
+    cnst_model.register_data(loader)
+    ## forecast IS
+    #print("forecasting")
+    #timeseries = loader.get_timeseries(IDs=[ID], end=3, features=["feature"])
+    #x = cnst_model.forecast(T, timeseries)
+    #cnst_model.register_data(loader, append_to_feature=str(cnst_model))
+    ## forecast OOS
+    #timeseries = loader.get_timeseries(IDs=[ID], end_index=10, features=["feature"])
+    #cnst_model.forecast(T, timeseries)
+    #cnst_model.register_data(loader, append_to_feature=str(cnst_model))
+    print(loader.df)
+    return
+
+    #is_reproduced(loader)
+test_simple()
+print("test")
+#+end_src
+
+#+RESULTS:
+#+begin_example
+[0, 1, 2]
+3
+[3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+13
+                         feature
+ID       timestamp dim          
+Constant 3         0    0.380196
+         4         0    0.380196
+         5         0    0.380196
+         6         0    0.380196
+         7         0    0.380196
+         8         0    0.380196
+         9         0    0.380196
+         10        0    0.380196
+         11        0    0.380196
+         12        0    0.380196
+test
+#+end_example
+
+#+begin_src jupyter-python :display text/plain :session py :async yes :kernel Main
+def test_set_data():
+    seed = 1234
+    N = 10
+    T = 5
+    feature_label = ["feature"]
+    rg = Generator(PCG64(seed))
+    # loader
+    path = "data/"
+    datatype = "simulated"
+    loader = LoaderTSdf(path=path, datatype=datatype)
+    # Simple model
+    cnst_model = TSmodels.Constant(dim=1, rg=rg,
+                                feature_label=feature_label)
+    # generate 1
+    cnst_model.set_data(data=[0, 1, 2])
+    g1 = cnst_model.generate(N, collision = "overwrite")
+    print(g1)
+    # generate 2
+    #cnst_model.set_data(data=[0, 1, 2])
+    #g2 = cnst_model.generate(N)
+    ## generate 3
+    #g3 = cnst_model.generate(N)
+    ## generate 3
+    #cnst_model.set_data([0, 3, 4])
+    #g4 = cnst_model.generate(N)
+    #print("out")
+    #print(g3.values)
+    #print(g4.values)
+    #assert all(g1.values == g2.values)
+    #assert all(g3.values == g4.values)
+
+test_set_data()
+#+end_src
+
+#+RESULTS:
+#+begin_example
+[0, 1, 2]
+3
+[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+10
+                         feature
+ID       timestamp dim          
+Constant 0         0    0.380196
+         1         0    0.380196
+         2         0    0.380196
+         3         0    0.380196
+         4         0    0.380196
+         5         0    0.380196
+         6         0    0.380196
+         7         0    0.380196
+         8         0    0.380196
+         9         0    0.380196
+#+end_example
+
+#+begin_src jupyter-python :display text/plain :session py :async yes :kernel Main
+def test_rolling_forecast():
+    seed = 1234
+    N = 10
+    T = 5
+    feature_label = ["feature"]
+    rg = Generator(PCG64(seed))
+    # loader
+    path = "data/"
+    datatype = "simulated"
+    loader = LoaderTSdf(path=path, datatype=datatype)
+    # Simple model
+    cnst_model = TSmodels.Constant(dim=1, rg=rg,
+                                feature_label=feature_label)
+    # generate
+    cnst_model.generate(N)
+    ID = str(cnst_model)
+    cnst_model.register_data(loader)
+    ## forecast IS
+    print("forecasting")
+    timeseries = loader.get_timeseries(IDs=[ID], end=3, features=["feature"])
+    x = cnst_model.forecast(T, timeseries)
+    cnst_model.register_data(loader, append_to_feature=str(cnst_model))
+    ## forecast OOS
+    #timeseries = loader.get_timeseries(IDs=[ID], end_index=10, features=["feature"])
+    #cnst_model.forecast(T, timeseries)
+    #cnst_model.register_data(loader, append_to_feature=str(cnst_model))
+    print(loader.df)
+    return
+
+    #is_reproduced(loader)
+test_rolling_forecast()
+print("test")
+#+end_src
+
+#+RESULTS:
+#+begin_example
+[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+10
+forecasting
+[10, 11, 12]
+13
+[13, 14, 15, 16, 17]
+18
+                         feature  feature_Constant
+ID       timestamp dim                            
+Constant 0         0    0.380196               NaN
+         1         0    0.380196               NaN
+         2         0    0.380196               NaN
+         3         0    0.380196               NaN
+         4         0    0.380196               NaN
+         5         0    0.380196               NaN
+         6         0    0.380196               NaN
+         7         0    0.380196               NaN
+         8         0    0.380196               NaN
+         9         0    0.380196               NaN
+         13        0         NaN          0.380196
+         14        0         NaN          0.380196
+         15        0         NaN          0.380196
+         16        0         NaN          0.380196
+         17        0         NaN          0.380196
+test
+#+end_example
+
