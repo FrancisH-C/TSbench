@@ -119,6 +119,6 @@ venv.bak/
 # mypy
 .mypy_cache/
 
-*.org
+*.org*
 *.ob-jupyter
 *.bbl
