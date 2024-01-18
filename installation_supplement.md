@@ -193,10 +193,10 @@ reference point to get started.
     library path:
 
     ``` shell
-    R_HOME_USER=$HOME/.config/R
-    R_LIBS_USER=$HOME/.config/R/packages
-    R_PROFILE_USER=$HOME/.config/R/
-    R_HISTFILE=$HOME/.config/R/history.Rhistory
+	R_HOME_USER=$HOME/.config/R
+	R_PROFILE_USER=$HOME/.config/R/
+	R_LIBS_USER=$HOME/.local/share/R/library
+	R_HISTFILE=$HOME/.local/share/R/history
 
     mkdir -p $R_LIBS_USER
     mkdir -p $R_PROFILE_USER
@@ -206,15 +206,29 @@ reference point to get started.
     R_PROFILE_USER = $R_PROFILE_USER
     R_HISTFILE = $R_HISTFILE" >> $HOME/.Renviron
     ```
+2.  Make verification
+	```r
+	.libPaths()
+	```
 
-2.  Install the necessary R packages using the R environment:
+	It should output
+	```r
+	[1] $HOME/.local/share/R/library" "/usr/lib/R/"
+	```
+
+3.  Install the necessary R packages using the R environment:
 
     ``` r
     install.packages("rugarch", repos="https://cloud.r-project.org")
     install.packages("rmgarch", repos="https://cloud.r-project.org")
     install.packages("MTS", repos="https://cloud.r-project.org")
+    install.packages("jsonlite", repos="https://cloud.r-project.org")
     ```
 
+4.  If you still have trouble (packages with non-zero return code), maybe you might be missing dependencies.
+
+	For example, for some distribution, you will need to install `TCL/TK` with the package manager.
+	
 ### Remove
 
 To remove `R` integration, simply uninstall `rpy2` using:
