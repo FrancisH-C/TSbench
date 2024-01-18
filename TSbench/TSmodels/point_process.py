@@ -26,13 +26,13 @@ class PointProcess():
         if type(current_timestamp) is list and len(current_timestamp) == 1:
             current_timestamp = current_timestamp[0]
 
-        if current_timestamp is None or current_timestamp == []:
+        if current_timestamp is None:
             if self.timestamp_style == "incr":
                 current_timestamp = 0
             elif self.timestamp_style == '%Y-%m-%d %X':
                 current_timestamp = '2000-01-01'
 
-        if self.timestamp_style == "incr" and type(current_timestamp) is not int:
+        if self.timestamp_style == "incr" and not isinstance(current_timestamp, int | np.int64):
             raise ValueError("Need a int for this timestamp_style")
 
         self.current_timestamp = current_timestamp
@@ -55,4 +55,5 @@ class Deterministic(PointProcess):
         #for _ in range(nb_points):
         #    next(self)
         return self.timestamp
+
 

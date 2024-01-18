@@ -1,21 +1,16 @@
 """Tsloader module."""
 from __future__ import annotations
-from abc import ABC, abstractmethod
+from abc import ABC
 import pandas as pd
 import numpy as np
 import math
 import os
-from functools import partial
-import time
 import shutil
 import logging
-import multiprocessing
-from multiprocessing import Pool
 from typing import Callable
 from TSbench.TSdata.DataFormat import convert_to_TSdf
 
 from joblib import Parallel, delayed
-import multiprocessing
 
 class TSloader(ABC):
     def __init__(
@@ -62,7 +57,6 @@ class TSloader(ABC):
         self.path = path
         if ensure_path:
             self._create_path()
-
 
 class LoaderTSdf(TSloader):
     """Use to write, load and modify a timeseries dataset.
@@ -381,7 +375,7 @@ class LoaderTSdf(TSloader):
             # if ndim and length is 1, pandas reduce it to dim to 0.
             # This brings it back as it is suppose to be: ndim == 1.
             if metadata[key].ndim == 1 and len(metadata[key]) == 1:
-                self.metadata = self.metadata.applymap(
+                self.metadata = self.metadata.map(
                     lambda arr: np.array(arr, ndmin=1)
                 )
 

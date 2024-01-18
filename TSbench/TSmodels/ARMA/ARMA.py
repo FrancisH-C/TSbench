@@ -95,8 +95,8 @@ class ARMA(Model):
         self.variance = variance
 
     def generate(
-        self, N: int, reset_timestamp=False, collision: str = "overwrite"
-    ) -> Constant:
+        self, N: int, reset_timestamp=True, collision: str = "overwrite"
+    ) -> Data:
         """Generate `T` values using Constant.
 
         Set self.data to the generated values.
@@ -143,7 +143,8 @@ class ARMA(Model):
                 self.ar[:, :], x[:, t - self.p : t + 1]
             )  # x_{t-i-j}
 
-        return self.set_data(data=np.transpose(x))
+        data = [np.transpose(x)[:,i] for i in range(self.dim)]
+        return self.set_data(data=data, reset_timestamp=reset_timestamp, collision=collision)
 
     def flipped_dot_dimension_wise(self, a: np.array, b: np.array) -> np.array:
         """Calculate the dot product of two vectors.
@@ -296,7 +297,7 @@ class ARMA(Model):
             "ma": self.ma,
         }
 
-    def train(self, collision = "overwrite") -> "ARMA":
+    def train(self) -> "ARMA":
         """Train model using `series` as the trainning set.
 
         Args:
@@ -320,7 +321,7 @@ class ARMA(Model):
     def forecast(
         self,
         T: int,
-        reset_timestamp=False,
+        reset_timestamp=True,
         collision: str = "overwrite",
     ) -> Data:
         """Forecast a timeseries.
@@ -359,4 +360,5 @@ class ARMA(Model):
 
         # numpy idiosyncratic detail :
         # (n,) array \neq (n,1) array, hence the reshape
-        return self.set_data(data=forecast.reshape(-1, self.dim), reset_timestamp=reset_timestamp, collision=collision)
+        data = [forecast.reshape(-1, self.dim)[:,i] for i in range(self.dim)]
+        return self.set_data(data=data, reset_timestamp=reset_timestamp, collision=collision)

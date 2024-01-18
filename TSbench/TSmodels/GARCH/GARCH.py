@@ -1,5 +1,6 @@
 """GARCH model."""
 from __future__ import annotations
+from types import NoneType
 import numpy as np
 from numpy import random as rand
 
@@ -25,7 +26,7 @@ class GARCH(GeneratorModel):
 
     def __init__(
         self,
-        A: np.array = None,
+        A: np.ndarray | NoneType = None,
         B: np.array = None,
         C: np.array = None,
         drift: int = 0,
@@ -87,32 +88,41 @@ class GARCH(GeneratorModel):
         else:
             self.C = C
 
-    def generate(self,  T: int, timeseries: tuple(np.array, np.array) = None, collision: str ="overwrite") -> tuple(np.array, np.array):
-        """Generate `T` values using GARCH.
+    def generate(
+        self, N: int, reset_timestamp=False, collision: str = "overwrite"
+    ) -> Data:
+        """Generate `N` values using GARCH.
 
         Args:
-            T (int): Number of observations to generate.
+            N (int): Number of observations to generate.
 
         Returns:
             dict[str, np.array] : {key :value} outputs
                 - {"returns"  : np.array of returns}
                 - {"vol"  : np.array of vol}.
         """
-        self.set_timeseries(timeseries=timeseries)
-        epsilon = np.zeros(T)
-        vol = np.ones(T)
-        z = rand.standard_normal(T)
+        # initial value
+        initial = self.get_data(format=np.ndarray)
+        epsilon = np.zeros(N - initial.shape[0])
+        vol = np.zeros(N - initial.shape[0])
+
+        if initial.size != 0:
+            # add initial to epsilon and vol
+            epsilon = np.concatenate((initial[:, 0], epsilon))
+            vol = np.concatenate((initial[:, 1], vol))
+
+        z = rand.standard_normal(N)
 
         # generate
-        for t in range(self.init_length(), T):
+        for t in range(0, N):
             vol[t] = np.sqrt(
-                self.C + self.generate_ma(epsilon, t) + self.generate_ar(vol, t)
+                (self.C + self.generate_ma(epsilon, t) + self.generate_ar(vol, t))[0,0]
             )
             epsilon[t] = vol[t] * z[t]
 
-        return self.set_timeseries(observations=[epsilon.reshape(T, 1), vol.reshape(T, 1)], collision=collision)
+        return self.set_data(data=[epsilon.reshape(N, 1), vol.reshape(N, 1)], collision=collision)
 
-    def generate_ar(self, vol: np.array, t: int) -> np.array:
+    def generate_ar(self, vol: np.ndarray, t: int) -> np.array:
         """Generate the GARCH autoregressive process with lagged values.
 
         Use up until `self.p`.

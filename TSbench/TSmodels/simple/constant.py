@@ -16,8 +16,8 @@ class Constant(Model):
         self.constant = constant
 
     def generate(
-        self, N: int, reset_timestamp=True, collision: str = "overwrite"
-    ) -> Constant:
+            self, N: int, reset_timestamp=True, collision: str = "overwrite"
+    ) -> Data:
         """Generate `T` values using Constant.
 
         Args:
@@ -31,9 +31,7 @@ class Constant(Model):
             data=self.constant * np.ones((N, self.dim)), reset_timestamp=reset_timestamp, collision = collision
         )
 
-    def train(
-        self, collision: str = "overwrite"
-    ) -> "Constant":
+    def train(self) -> "Constant":
         """Train model using `data` as the trainning set.
 
         Args:
@@ -49,7 +47,7 @@ class Constant(Model):
     def forecast(
         self,
         T: int,
-        reset_timestamp=True,
+        reset_timestamp=False,
         collision: str = "overwrite",
     ) -> Data:
         """Forecast a data.

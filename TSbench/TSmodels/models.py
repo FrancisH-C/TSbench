@@ -2,11 +2,9 @@
 from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Union
-import inspect
 
-from TSbench.TSdata.TSloader import TSloader, LoaderTSdf
-from TSbench.TSdata.DataFormat import convert_to_TSdf
-from TSbench.TSmodels.data import Data
+from TSbench.TSdata.TSloader import LoaderTSdf
+from TSbench.TSmodels.data import Data, size
 from TSbench.TSmodels.utils.corr_mat import Corr_mat
 from TSbench.TSmodels.point_process import Deterministic
 
@@ -19,7 +17,6 @@ from randomgen import Xoshiro256
 import os
 import pickle
 import json
-
 
 class BaseModel(ABC):
     """Abstract Base model class.
@@ -95,8 +92,6 @@ class BaseModel(ABC):
         else:
             return [self.default_features[i] for i in range(len(self.default_features))]
 
-        
-
         return [self.default_features[i] + str(j) for i in range(len(self.default_features)) for j in range(self.dim)]
 
     def set_feature_label(self, feature_label=None):
@@ -124,6 +119,11 @@ class BaseModel(ABC):
         """Model representation."""
         return str(self)
 
+    def get_timestamp(
+        self, start=None, start_index=None, end=None, end_index=None, IDs=None
+    ):
+        return self.loader.get_timestamp(start=start, start_index=start_index, end=end, end_index=end_index, IDs=IDs)
+
     def get_data(self, format: type = LoaderTSdf, start = None, start_index = None, end = None, end_index = None, timestamps = None, dims = None, features = None):
         """Get the model's data.
 
@@ -138,31 +138,35 @@ class BaseModel(ABC):
         if format is pd.DataFrame:
             return data
 
-    def set_data(self, data: Data = None, timestamp: np.array=None, reset_timestamp=True, collision: str ="overwrite"):
-        """Set data using loader.
+    def rm_data(self, timestamps):
+        self.loader.df.drop(index=timestamps, level="timestamp", inplace=True)
+
+    def set_data(self, data: Data = None, reset_timestamp=True, collision: str ="overwrite"):
+        """Set model's data using loader.
 
         For format LoaderTSdf set the timeseries.
         For data of type other than LoaderTSdf, it assumes that data represents observations of the timeseries.
 
         """
-        if data is None or len(data) == 0:
+        if data is None or size(data) == 0:
             self.point_process.set_current_timestamp(current_timestamp=0)
             self.loader.add_data(data=None, ID=str(self), collision = collision)
             return self.get_data()
 
-        if timestamp is None:
-            if reset_timestamp:
-                self.point_process.set_current_timestamp(current_timestamp=0)
-            timestamp = self.point_process.generate_timestamp(nb_points=len(data))
-        self.point_process.set_current_timestamp(current_timestamp=timestamp[-1] + 1)
+        if reset_timestamp:
+            self.point_process.set_current_timestamp(current_timestamp=0)
+        else:
+            self.point_process.set_current_timestamp(current_timestamp=self.get_timestamp(start_index=-1)[0] + 1)
 
-        self.loader.add_data(data=data, ID=str(self), timestamp=timestamp, collision = collision)
+        timestamp = self.point_process.generate_timestamp(nb_points=size(data))
+        self.loader.add_data(data=data, ID=str(self), timestamp=timestamp,
+                             collision=collision, dim_label=self.dim_label, feature_label=self.feature_label)
         return self.get_data()
 
     def register_data(self, loader=None, ID=None, append_to_feature = None, feature_label=None, collision="update"):
-        """Record outputs.
+        """Record outputs from model to an external loader.
 
-        Record data under given ID (used for data forecaste).
+        Record data under given ID (used for data forecast).
         If None, it records under its own name (used for data generated)
 
         model.data (list[np.array]): Every list entry (of type np.array) is a feature
@@ -302,7 +306,7 @@ class ForecastingModel(BaseModel):
         super().__init__(**model_args)
 
     @abstractmethod
-    def train(self, data: Data = None) -> "Model":
+    def train(self) -> "Model":
         """Train model using `state` as the trainning set.
 
         Args:
@@ -318,7 +322,7 @@ class ForecastingModel(BaseModel):
     def forecast(
         self,
         T: int,
-        reset_timestamp=True,
+        reset_timestamp=False,
         collision: str = "overwrite",
     ) -> Data:
         """Forecast a timeseries.
@@ -339,8 +343,7 @@ class ForecastingModel(BaseModel):
 
     def rolling_forecast(
             self, T: int, batch_size=1, window_size=0,
-            train: bool = False,
-            side="before", collision: str ="overwrite"
+            train: bool = False, side="before"
     ) -> Data:
         """Rolling forecast a timeseries.
 
@@ -354,20 +357,20 @@ class ForecastingModel(BaseModel):
         if side == "before":
             T = math.floor(T / batch_size) * batch_size
 
-        if T >= batch_size:
-            # first forecast overwriting observations
-            x = self.get_data(start_index=-window_size)
-            print(x)
-            self.set_data(self.get_data(start_index=-window_size))
-            self.forecast(batch_size, collision="overwrite")
-
-        print("you see me rolling")
+        initial_timestamps=pd.DataFrame()
         # start at last forecast timestamp
-        for _ in range(batch_size, T, batch_size):
-            x = self.get_data(start_index=-window_size)
-            print(x)
+        rolling_forecast = pd.DataFrame()
+        for _ in range(0, T, batch_size):
+            # input
             self.set_data(self.get_data(start_index=-window_size))
-            self.forecast(batch_size, collision="update")
+            if train:
+                self.train()
+            self.forecast(batch_size, reset_timestamp=False, collision="update")
+
+            # output
+            forecast = self.get_data(start_index=-batch_size)
+            rolling_forecast = pd.concat([rolling_forecast, forecast])
+        self.set_data(rolling_forecast)
         return self.get_data()
 
 

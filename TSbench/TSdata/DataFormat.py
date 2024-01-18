@@ -15,10 +15,19 @@ def convert_to_TSdf(data, ID=None, timestamp=None, dim_label=None, feature_label
             feature_label=feature_label,
         )
     elif type(data) is list:
-        # list of arrays or list of list
-        if type(data[0]) is np.ndarray or type(data[0]) is list:
+        # list of np.array
+        if type(data[0]) is np.ndarray:
             df = listnp_to_TSdf(
                 data,
+                ID=ID,
+                timestamp=timestamp,
+                dim_label=dim_label,
+                feature_label=feature_label,
+            )
+        #  list of list
+        elif type(data[0]) is list:
+            df = np_to_TSdf(
+                np.array(data),
                 ID=ID,
                 timestamp=timestamp,
                 dim_label=dim_label,
@@ -174,6 +183,8 @@ def np_to_TSdf(
             f"'arr' along axis 1 is {arr.shape[-1]} and 'dim_label' "
             + f"is {len(dim_label)}. Need the same dimension."
         )
+
+
 
     # Convert DataFrame to TSdf format
     df = df_to_TSdf(df, ID=ID, timestamp=timestamp, dim_label=dim_label)
