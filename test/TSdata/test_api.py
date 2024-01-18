@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from TSbench.TSdata import LoaderTSdf, DataFormat
+from TSbench.TSdata import LoaderTSdf
 
 
 def test_low_level():
