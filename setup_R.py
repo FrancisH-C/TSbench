@@ -7,9 +7,9 @@ import importlib.util
 home = Path.home()
 r_environ = os.path.join(home, ".Renviron")
 r_home = os.path.join(home, ".config/R/")
-profile = os.path.join(home, ".config/R/")
-libs = os.path.join(home, ".config/R/packages/")
-histfile = os.path.join(home, ".config/R/history/")
+profile = os.path.join(home, ".config/R/.Rprofile")
+libs = os.path.join(home, ".local/share/R/library/")
+histfile = os.path.join(home, ".local/share/R/history/")
 
 
 def install_R_package():
@@ -34,9 +34,7 @@ def R_config():
 
 def R_directories():
     os.makedirs(r_home, exist_ok=True)
-    os.makedirs(profile, exist_ok=True)
     os.makedirs(libs, exist_ok=True)
-    os.makedirs(histfile, exist_ok=True)
 
 
 if __name__ == "__main__":
