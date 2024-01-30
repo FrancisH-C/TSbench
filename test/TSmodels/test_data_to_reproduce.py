@@ -1,8 +1,8 @@
-from TSbench import TSmodels, LoaderTSdf
 import numpy as np
 from numpy.random import Generator, PCG64
 from randomgen import Xoshiro256
-from TSbench.TSdata import LoaderTSdf, DataFormat
+from TSbench.TSdata import LoaderTSdf
+from TSbench import TSmodels
 
 path = "data/test_models"
 datatype = "simulated"

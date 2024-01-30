@@ -1,6 +1,7 @@
 import pytest
 import numpy as np
-from TSbench import TSmodels, LoaderTSdf
+from TSbench.TSdata import LoaderTSdf
+from TSbench import TSmodels
 from numpy.random import Generator, PCG64
 
 def is_reproduced(loader):
