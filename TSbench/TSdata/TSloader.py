@@ -491,7 +491,7 @@ class LoaderTSdf(TSloader):
 
     @staticmethod
     def merge_splitted_files(loader, n_jobs, write_metadata: bool = True, rm: bool = True) -> None:
-        if loader.permission == "read" and write:
+        if loader.permission == "read" and self.write:
             raise ValueError(
                 "You cannot write metadata while merging " + "with 'read' permission."
             )
