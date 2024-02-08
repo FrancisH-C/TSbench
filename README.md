@@ -30,4 +30,4 @@ detailed information on:
 - Setting up virtual environment in Python
 
 It is strongly recommended to use a virtual environment for your Python
-installation.
+installation. Some installation errors may occur otherwise due to path localization.
