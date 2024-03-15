@@ -70,6 +70,7 @@ def simple_loader():
 
     return loader
 
+
 def test_loaderCSV():
     """Simple loader for test."""
     path = "data/test_CSV"
@@ -146,7 +147,7 @@ def test_dataset_operations():
     merge_path = "data/test_dataset_operations/merge/"
 
     loader = LoaderTSdf(path=path, datatype="test")
-    loader_other = LoaderTSdf(path=path ,datatype="test")
+    loader_other = LoaderTSdf(path=path, datatype="test")
 
     loader.rm_dataset()
     loader._create_path()
@@ -256,20 +257,20 @@ def test_metadata_operations():
     # add
     # list or no list input
     loader.append_to_metadata(test_metadata=1)
-    assert loader.metadata["test_metadata"][0] == [1]
+    assert loader.metadata["test_metadata"].iloc[0] == [1]
     loader.append_to_metadata(test_metadata=[1])
-    assert loader.metadata["test_metadata"][0] == [1]
+    assert loader.metadata["test_metadata"].iloc[0] == [1]
     # different value add
     loader.append_to_metadata(test_metadata=2)
     loader.append_to_metadata(test_metadata=[3])
-    assert (loader.metadata["test_metadata"][0] == [1, 2, 3]).all()
+    assert (loader.metadata["test_metadata"].iloc[0] == [1, 2, 3]).all()
 
     # overwrite
     # list or no list input
     loader.set_metadata(test_metadata=1)
-    assert loader.metadata["test_metadata"][0] == [1]
+    assert loader.metadata["test_metadata"].iloc[0] == [1]
     loader.set_metadata(test_metadata=[1])
-    assert loader.metadata["test_metadata"][0] == [1]
+    assert loader.metadata["test_metadata"].iloc[0] == [1]
 
     ## set datatype to call all the metadata initialization
     loader.set_datatype("test")
