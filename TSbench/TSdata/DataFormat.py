@@ -1,4 +1,5 @@
 """Example of data format to a TimeSeries DataFrame."""
+
 import pandas as pd
 import numpy as np
 
@@ -15,8 +16,8 @@ def convert_to_TSdf(data, ID=None, timestamp=None, dim_label=None, feature_label
             feature_label=feature_label,
         )
     elif type(data) is list:
-        # list of arrays or list of list
-        if type(data[0]) is np.ndarray or type(data[0]) is list:
+        # list of np.array
+        if type(data[0]) is np.ndarray:
             df = listnp_to_TSdf(
                 data,
                 ID=ID,
@@ -24,7 +25,25 @@ def convert_to_TSdf(data, ID=None, timestamp=None, dim_label=None, feature_label
                 dim_label=dim_label,
                 feature_label=feature_label,
             )
-        else: # non-nested list
+        #  list of list
+        elif type(data[0]) is list:
+            df = np_to_TSdf(
+                np.array(data),
+                ID=ID,
+                timestamp=timestamp,
+                dim_label=dim_label,
+                feature_label=feature_label,
+            )
+        # Alternative : list of arrays or list of list
+        # if type(data[0]) is np.ndarray or type(data[0]) is list:
+        #     df = listnp_to_TSdf(
+        #         data,
+        #         ID=ID,
+        #         timestamp=timestamp,
+        #         dim_label=dim_label,
+        #         feature_label=feature_label,
+        #     )
+        else:  # non-nested list
             df = np_to_TSdf(
                 np.array(data),
                 ID=ID,

@@ -3,6 +3,7 @@
 These are example of how to format data.
 
 """
+
 from __future__ import annotations
 from TSbench.TSdata.TSloader import LoaderTSdf
 import os
@@ -85,7 +86,10 @@ def merge_dataset(
         raise ValueError("Give a list of the loaders to merge")
 
     merge_loader = LoaderTSdf(
-        path=merge_path, datatype=loaders[0].datatype, permission="overwrite", **merge_loader_args
+        path=merge_path,
+        datatype=loaders[0].datatype,
+        permission="overwrite",
+        **merge_loader_args,
     )
 
     i = 0
