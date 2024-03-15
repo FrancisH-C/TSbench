@@ -1,9 +1,11 @@
 # no images
 .png
-.pqt
 
 # ignore simulted data
 data/
+.pqt
+.json
+.pkl
 subset_data/
 # ignore examples' output
 examples
