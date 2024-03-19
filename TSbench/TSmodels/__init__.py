@@ -14,4 +14,3 @@ if importlib.util.find_spec("rpy2") is not None:
     from TSbench.TSmodels.R import rGARCH
 
 from TSbench.TSmodels.point_process import PointProcess, Deterministic
-

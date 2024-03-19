@@ -1,4 +1,5 @@
 """Export path to be read in when running R."""
+
 # https://stackoverflow.com/questions/25389095/python-get-path-of-root-project-structure
 import os
 

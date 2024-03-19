@@ -1,4 +1,5 @@
 """Univariate Garch model using R."""
+
 # https://medium.com/analytics-vidhya/calling-r-from-python-magic-of-rpy2-d8cbbf991571
 # https://medium.com/@remycanario17/update-converting-python-dataframes-to-r-with-rpy2-59edaef63e0e
 

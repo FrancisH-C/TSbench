@@ -1,13 +1,15 @@
 """Constant model."""
+
 from __future__ import annotations
 import numpy as np
 from TSbench.TSmodels.models import Model
 from TSbench.TSmodels.data import Data
 
+
 class Constant(Model):
     """A simple constant model."""
 
-    def __init__(self, constant: np.array = None, **model_args) -> None:
+    def __init__(self, constant: np.ndarray = None, **model_args) -> None:
         """Initialize Constant."""
         super().__init__()
         super().__init__(default_features=["returns"], **model_args)
@@ -17,27 +19,27 @@ class Constant(Model):
 
     def generate(
         self, N: int, reset_timestamp=True, collision: str = "overwrite"
-    ) -> Constant:
+    ) -> Data:
         """Generate `T` values using Constant.
 
         Args:
             T (int): Number of observations to generate.
 
         Returns:
-            np.array: returns
+            np.ndarray: returns
 
         """
         return self.set_data(
-            data=self.constant * np.ones((N, self.dim)), reset_timestamp=reset_timestamp, collision = collision
+            data=self.constant * np.ones((N, self.dim)),
+            reset_timestamp=reset_timestamp,
+            collision=collision,
         )
 
-    def train(
-        self, collision: str = "overwrite"
-    ) -> "Constant":
+    def train(self) -> "Constant":
         """Train model using `data` as the trainning set.
 
         Args:
-            data (np.array): Input data.
+            data (np.ndarray): Input data.
 
         Returns:
             Constant: Trained Constant model.
@@ -49,7 +51,7 @@ class Constant(Model):
     def forecast(
         self,
         T: int,
-        reset_timestamp=True,
+        reset_timestamp=False,
         collision: str = "overwrite",
     ) -> Data:
         """Forecast a data.
@@ -57,13 +59,15 @@ class Constant(Model):
         Knowing `data` forecast `T` values.
 
         Args:
-            data (np.array): Input data.
+            data (np.ndarray): Input data.
             T (int): Number of forward forecast.
 
         Returns:
-            dict[str, np.array]: Possible {key :value} outputs
-                - {"returns" : np.array of returns}
+            dict[str, np.ndarray]: Possible {key :value} outputs
+                - {"returns" : np.ndarray of returns}
         """
         return self.set_data(
-            data=self.constant * np.ones((T, self.dim)), reset_timestamp=reset_timestamp, collision=collision
+            data=self.constant * np.ones((T, self.dim)),
+            reset_timestamp=reset_timestamp,
+            collision=collision,
         )

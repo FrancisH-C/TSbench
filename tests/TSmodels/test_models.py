@@ -87,10 +87,6 @@ def test_model_generate():
     assert all(g5 == g6)
 
 
-def test_model_train():
-    raise ValueError()
-
-
 def test_model_forecast():
     seed = 1234
     N = 10

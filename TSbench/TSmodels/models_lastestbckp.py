@@ -1,4 +1,5 @@
 """Model module defing BaseClass and subclasses."""
+
 from __future__ import annotations
 from math import ceil
 import numpy as np
@@ -309,9 +310,9 @@ class ForecastingModel(BaseModel):
         for forecasts_name in forecasts:
             array_to_add = forecasts[forecasts_name]
             stored_array = self.forecasted[forecasts_name]
-            stored_array[
-                start_index : start_index + array_to_add.shape[0]
-            ] = array_to_add
+            stored_array[start_index : start_index + array_to_add.shape[0]] = (
+                array_to_add
+            )
 
     def _basic_rolling_split(
         self, dataset: pd.DataFrame, rolling_parameters: list[int]

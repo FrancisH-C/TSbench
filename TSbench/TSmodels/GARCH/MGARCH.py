@@ -21,11 +21,13 @@ class VEC_GARCH(GARCH):
         """Initialize VEC_GARCH."""
         super().__init__(**garch_args)
 
-    def generate(self, T: int) -> dict[str, np.array]:
-        """Generate `T` values using VEC-GARCH.
+    def generate(
+        self, N: int, reset_timestamp=False, collision: str = "overwrite"
+    ) -> Data:
+        """Generate `N` values using VEC-GARCH.
 
         Args:
-            T (int): Number of observations to generate.
+            N (int): Number of observations to generate.
 
         Returns:
             dict[str, np.array] : {key :value} outputs
@@ -33,19 +35,28 @@ class VEC_GARCH(GARCH):
                 - {"vol"  : np.array of vol}.
         """
         # initialization
-        epsilon, vol = self.initial_state_default(T)
-        z = rand.standard_normal(size=(self.dim, T))
+        epsilon, vol = self.initial_state_default(N)
+        z = rand.standard_normal(size=(self.dim, N))
 
         # generate observations
-        for t in range(self.init_length(), T):
+        for t in range(self.init_length(), N):
             vol[t, :, :] = (
                 self.C + self.generate_ma(epsilon, t) + self.generate_ar(vol, t)
             )
             vol[t, :, :] = cholesky(vol[t, :, :])
             epsilon[:, t] = np.dot(vol[t, :, :], z[:, t])
 
-        self.generated = {"returns": epsilon, "vol": vol}
-        return self.generated
+        print(self.feature_label)
+        print(epsilon[0, :])
+        print(epsilon[1, :])
+        print(vol[0, :])
+        print(vol[1, :])
+
+        print(self.dim_label)
+        self.set_data(data=vol)
+
+        # self.generated = {"returns": epsilon, "vol": vol}
+        # return self.set_data(data=[np.array(epsilon[0]), np.array(epsilon[1]), np.array(vol[0]), np.array(vol[1])], collision=collision)
 
     def initial_state_default(self, T: int) -> tuple[np.array, np.array]:
         """Generate inital state as zero returns and identity variance matrix.
@@ -157,7 +168,9 @@ class SPD_VEC_GARCH(VEC_GARCH):
                 "Number of translations to make matrix positive definite :",
                 translations,
             )
-        self.generated = [np.transpose(epsilon)] + [vol[:, :, i] for i in range(self.dim)]
+        self.generated = [np.transpose(epsilon)] + [
+            vol[:, :, i] for i in range(self.dim)
+        ]
         return self.generated
 
     def generate_ar(self, vol: np.array, t: int) -> np.array:
@@ -201,13 +214,121 @@ class SPD_VEC_GARCH(VEC_GARCH):
     def __repr__(self) -> str:
         """ARMA info and dimension."""
         name = super().__str__()
-        info = (
-            "("
-            + str(self.p)
-            + ", "
-            + str(self.q)
-            + ", dim="
-            + str(self.dim)
-            + ")"
-        )
+        info = "(" + str(self.p) + ", " + str(self.q) + ", dim=" + str(self.dim) + ")"
         return name + info
+
+
+class DCC_GARCH(GeneratorModel):
+    """Generate outputs using the DCC-GARCH models within a simulation.
+
+    Args:
+        update_rule (Callable[...,int], optional): How to update the correlation matrix
+             at each timestep. Default is `self.DCCE`.
+        univariate (list[GARCH], optional): List of `self.dim` GARCH-type model used to
+             generate the univariate variance. Default is to have a list of
+            `self.dim` `GARCH` model.
+        R (np.array, optional): A correlation matrix. Default is the identity matrix.
+        **model_args: Arguments for `Model`. Possible keywords are `dim`, `lag`
+            and `corr`.
+    """
+
+    def __init__(
+        self,
+        update_rule: Callable[..., int] = None,
+        univariate: list[GARCH] = None,
+        R: np.array = None,
+        theta1: float = 0.05,
+        theta2: float = 0.05,
+        **model_args,
+    ) -> None:
+        """Initialize DCC_GARCH."""
+        super().__init__(**model_args)
+
+        if univariate is None:
+            self.univariate = [GARCH(lag=self.lag) for _ in range(0, self.dim)]
+        else:
+            self.univariate = univariate
+
+        if R is None:
+            self.R = self.corr_mat.mat
+        else:
+            self.R = R
+
+        if update_rule is None:
+            # lambda function can't be pickle so theta can't be pass as parameter
+            self.update_rule = self.DCCE
+            self.theta1 = theta1
+            self.theta2 = theta2
+        else:
+            self.update_rule = update_rule
+
+    def generate(self, T: int) -> dict[str, np.array]:
+        """Generate `T` values using DCC-GARCH.
+
+        Args:
+            T (int): Number of observations to generate.
+
+        Returns:
+            dict[str, np.array]: {key :value} outputs
+                - {"returns"  : np.array of returns}
+                - {"vol"  : np.array of vol}.
+        """
+        # initialization
+        epsilon = np.zeros((self.dim, T))
+        vol = np.zeros((T, self.dim, self.dim))
+        z = rand.standard_normal(size=(self.dim, T))
+
+        # generate univariate
+        for i in range(0, len(self.univariate)):
+            outputs = self.univariate[i].generate(T)
+            # x, vol[:, i, i] = outputs["returns"], outputs["vol"]
+            # x = outputs["returns"]
+            vol[:, i, i] = outputs["vol"].reshape(T)  # from (T, 1)
+
+        # compose
+        R0 = self.R
+        for t in range(2, T):
+            vol[t, :, :] = np.matmul(vol[t, :, :], np.matmul(self.R, vol[t, :, :]))
+            self.update_rule(z=z, R0=R0, t=t, theta1=self.theta1, theta2=self.theta2)
+
+            vol[t, :, :] = cholesky(vol[t, :, :])
+
+            epsilon[:, t] = np.matmul(vol[t, :, :], z[:, t])
+
+        self.outputs = {"returns": np.transpose(epsilon), "vol": vol}
+        return self.outputs
+
+    def __repr__(self) -> str:
+        """GARCH info by dimension."""
+        name = super().__repr__()
+        output = " with"
+        for garch in self.univariate:
+            output = output + ", " + str(garch)
+
+        return name + output
+
+    def DCCE(
+        self,
+        z: np.array,
+        R0: np.array,
+        t: int,
+        theta1: float = 0.05,
+        theta2: float = 0.05,
+    ) -> None:
+        """Update correlation matrix using DCC_E (Engle 2000).
+
+        Args:
+            z (np.array): Observed noise, usually a Normal(0,1).
+            R0 (np.array): Initial correlation matrix.
+            t (np.array): The current time.
+
+        """
+        m = 2
+        u = z[:, t - m : t]
+        psi = np.eye(self.dim)
+        for i in range(0, self.dim):
+            for j in range(0, self.dim):
+                psi[i, j] = np.matmul(u[i, :], u[j, :]) / np.sqrt(
+                    np.linalg.norm(u[i, :]) ** 2 * np.linalg.norm(u[j, :]) ** 2
+                )
+        self.R = np.dot(1 - theta1 - theta2, R0) + theta1 * psi + np.dot(theta2, self.R)

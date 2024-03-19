@@ -1,12 +1,11 @@
 """Model module defing BaseClass and subclasses."""
+
 from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Union
-import inspect
 
-from TSbench.TSdata.TSloader import TSloader, LoaderTSdf
-from TSbench.TSdata.DataFormat import convert_to_TSdf
-from TSbench.TSmodels.data import Data
+from TSbench.TSdata.TSloader import LoaderTSdf
+from TSbench.TSmodels.data import Data, size
 from TSbench.TSmodels.utils.corr_mat import Corr_mat
 from TSbench.TSmodels.point_process import Deterministic
 
@@ -41,16 +40,16 @@ class BaseModel(ABC):
 
     def __init__(
         self,
-        loader = None,
-        name = None,
+        loader=None,
+        name=None,
         dim: int = 1,
         lag: int = None,
         rg: Generator = None,
         corr_mat: Corr_mat = None,
-        point_process = None,
+        point_process=None,
         dim_label: list[str] = None,
         feature_label: list[str] = None,
-        default_features: list[str] = ["returns"]
+        default_features: list[str] = ["returns"],
     ) -> None:
         """Initialize BaseModel."""
         self.dim = dim
@@ -64,7 +63,7 @@ class BaseModel(ABC):
         self.set_random_generator(rg)
         self.set_corr_mat(corr_mat)
         self.set_feature_label(feature_label)
-        self.set_dim_label(dim_label= self.set_point_process())
+        self.set_dim_label(dim_label=self.set_point_process())
 
     def set_name(self, name=None):
         self._name = name
@@ -91,18 +90,24 @@ class BaseModel(ABC):
 
     def default_feature_label(self):
         if self.dim > 1:
-            return [self.default_features[i] + str(j) for i in range(len(self.default_features)) for j in range(self.dim)]
+            return [
+                self.default_features[i] + str(j)
+                for i in range(len(self.default_features))
+                for j in range(self.dim)
+            ]
         else:
             return [self.default_features[i] for i in range(len(self.default_features))]
 
-        
-
-        return [self.default_features[i] + str(j) for i in range(len(self.default_features)) for j in range(self.dim)]
+        return [
+            self.default_features[i] + str(j)
+            for i in range(len(self.default_features))
+            for j in range(self.dim)
+        ]
 
     def set_feature_label(self, feature_label=None):
         if feature_label is None:
             feature_label = self.default_feature_label()
-        #elif len(feature_label) != len(self.default_features) * self.dim:
+        # elif len(feature_label) != len(self.default_features) * self.dim:
         #    raise ValueError("Need `nb_features` entry(ies) for 'feature_label'")
         self.feature_label = feature_label
 
@@ -117,20 +122,46 @@ class BaseModel(ABC):
     def __str__(self) -> str:
         """Model basic string info."""
         if self._name == None:
-            self._name = type(self).__name__.replace("_", "-") 
+            self._name = type(self).__name__.replace("_", "-")
         return self._name
 
     def __repr__(self) -> str:
         """Model representation."""
         return str(self)
 
-    def get_data(self, format: type = LoaderTSdf, start = None, start_index = None, end = None, end_index = None, timestamps = None, dims = None, features = None):
+    def get_timestamp(
+        self, start=None, start_index=None, end=None, end_index=None, IDs=None
+    ):
+        return self.loader.get_timestamp(
+            start=start, start_index=start_index, end=end, end_index=end_index, IDs=IDs
+        )
+
+    def get_data(
+        self,
+        format: type = LoaderTSdf,
+        start=None,
+        start_index=None,
+        end=None,
+        end_index=None,
+        timestamps=None,
+        dims=None,
+        features=None,
+    ):
         """Get the model's data.
 
         For format LoaderTSdf return the time series
         For format other than LoaderTSdf, returns only the observations of the time series.
         """
-        data = self.loader.get_timeseries(IDs=[str(self)], start=start, start_index=start_index, end=end, end_index=end_index, timestamps=timestamps, dims=dims, features=features)
+        data = self.loader.get_timeseries(
+            IDs=[str(self)],
+            start=start,
+            start_index=start_index,
+            end=end,
+            end_index=end_index,
+            timestamps=timestamps,
+            dims=dims,
+            features=features,
+        )
         if format is LoaderTSdf:
             return data
         if format is np.ndarray:
@@ -138,36 +169,57 @@ class BaseModel(ABC):
         if format is pd.DataFrame:
             return data
 
-    def set_data(self, data: Data = None, timestamp: np.array=None, reset_timestamp=True, collision: str ="overwrite"):
-        """Set data using loader.
+    def rm_data(self, timestamps):
+        self.loader.df.drop(index=timestamps, level="timestamp", inplace=True)
+
+    def set_data(
+        self, data: Data = None, reset_timestamp=True, collision: str = "overwrite"
+    ):
+        """Set model's data using loader.
 
         For format LoaderTSdf set the timeseries.
         For data of type other than LoaderTSdf, it assumes that data represents observations of the timeseries.
 
         """
-        if data is None or len(data) == 0:
+        if data is None or size(data) == 0:
             self.point_process.set_current_timestamp(current_timestamp=0)
-            self.loader.add_data(data=None, ID=str(self), collision = collision)
+            self.loader.add_data(data=None, ID=str(self), collision=collision)
             return self.get_data()
 
-        if timestamp is None:
-            if reset_timestamp:
-                self.point_process.set_current_timestamp(current_timestamp=0)
-            timestamp = self.point_process.generate_timestamp(nb_points=len(data))
-        self.point_process.set_current_timestamp(current_timestamp=timestamp[-1] + 1)
+        if reset_timestamp:
+            self.point_process.set_current_timestamp(current_timestamp=0)
+        else:
+            self.point_process.set_current_timestamp(
+                current_timestamp=self.get_timestamp(start_index=-1)[0] + 1
+            )
 
-        self.loader.add_data(data=data, ID=str(self), timestamp=timestamp, collision = collision)
+        timestamp = self.point_process.generate_timestamp(nb_points=size(data))
+        self.loader.add_data(
+            data=data,
+            ID=str(self),
+            timestamp=timestamp,
+            collision=collision,
+            dim_label=self.dim_label,
+            feature_label=self.feature_label,
+        )
         return self.get_data()
 
-    def register_data(self, loader=None, ID=None, append_to_feature = None, feature_label=None, collision="update"):
-        """Record outputs.
+    def register_data(
+        self,
+        loader=None,
+        ID=None,
+        append_to_feature=None,
+        feature_label=None,
+        collision="update",
+    ):
+        """Record outputs from model to an external loader.
 
-        Record data under given ID (used for data forecaste).
+        Record data under given ID (used for data forecast).
         If None, it records under its own name (used for data generated)
 
         model.data (list[np.array]): Every list entry (of type np.array) is a feature
             with dimension T \times self.dim. The list is length is the length of the features.
-            i.e. 
+            i.e.
                     len(data) == len(feature).
                     [len(data[i]) == T for i in range(len(data))]
         """
@@ -179,16 +231,16 @@ class BaseModel(ABC):
         if append_to_feature is None:
             feature_label = self.feature_label
         else:
-            feature_label = [self.feature_label[i] + "_" + append_to_feature for i in range(len(self.feature_label))]
+            feature_label = [
+                self.feature_label[i] + "_" + append_to_feature
+                for i in range(len(self.feature_label))
+            ]
 
         if data.shape[1] != len(feature_label):
             raise ValueError("Need the same length of data as the lenght of feature .")
 
         loader.add_data(
-            data=data,
-            ID = ID,
-            feature_label=feature_label,
-            collision=collision
+            data=data, ID=ID, feature_label=feature_label, collision=collision
         )
         return loader.df
 
@@ -202,23 +254,31 @@ class BaseModel(ABC):
         Args:
             filename (str): Name of pickle file where to save.
         """
+
         def convert_to_json_serializable(model):
             attributes = model.__dict__
             to_output = {}
             for att_name in attributes:
                 if type(attributes[att_name]) is np.ndarray:
                     to_output[att_name] = attributes[att_name].tolist()
-                if isinstance(attributes[att_name],  Union[int, float, complex]):
+                if isinstance(attributes[att_name], Union[int, float, complex]):
                     to_output[att_name] = attributes[att_name]
             return to_output
 
         _, ext = os.path.splitext(filename)
         if ext == ".pkl" or ext == ".pickle":
-            with open(filename, 'wb') as f:
+            with open(filename, "wb") as f:
                 pickle.dump(self, f, protocol=pickle.HIGHEST_PROTOCOL)
         elif ext == ".json":
-            with open(filename, 'w') as f:
-                f.write(json.dumps(self, default=convert_to_json_serializable, sort_keys=True, indent=4))
+            with open(filename, "w") as f:
+                f.write(
+                    json.dumps(
+                        self,
+                        default=convert_to_json_serializable,
+                        sort_keys=True,
+                        indent=4,
+                    )
+                )
         else:
             raise ValueError("Unsupported extension type.")
 
@@ -227,24 +287,27 @@ class BaseModel(ABC):
         """Load model.
 
         "pickle" is prefered to load the exact model.
- 
+
         Caution: json does not differentiate between list and array, models may.
 
         Args:
             filename (str): Name of pickle file where to save.
         """
-        def model_from_parameters(model_class, parameters: dict[str, Union[int, float, complex, list]]):
+
+        def model_from_parameters(
+            model_class, parameters: dict[str, Union[int, float, complex, list]]
+        ):
             "returns a new instance of the class"
             new_instance = model_class.__new__(model_class)
             new_instance.__init__(**parameters)
             return new_instance
-        
+
         _, ext = os.path.splitext(filename)
         if ext == ".pkl" or ext == ".pickle":
-            with open(filename, 'rb') as f:
+            with open(filename, "rb") as f:
                 return pickle.load(f)
         elif ext == ".json":
-            with open(filename, 'r') as f:
+            with open(filename, "r") as f:
                 return model_from_parameters(model_class, json.load(f))
         else:
             raise ValueError("Unsupported extension type.")
@@ -262,7 +325,6 @@ class GeneratorModel(BaseModel):
     """
 
     def __init__(self, **model_args) -> None:
-        
         """Initialize GeneratorModel."""
         super().__init__(**model_args)
 
@@ -296,13 +358,12 @@ class ForecastingModel(BaseModel):
 
     """
 
-        
     def __init__(self, **model_args) -> None:
         """Initialize ForecastingModel."""
         super().__init__(**model_args)
 
     @abstractmethod
-    def train(self, data: Data = None) -> "Model":
+    def train(self) -> "Model":
         """Train model using `state` as the trainning set.
 
         Args:
@@ -318,7 +379,7 @@ class ForecastingModel(BaseModel):
     def forecast(
         self,
         T: int,
-        reset_timestamp=True,
+        reset_timestamp=False,
         collision: str = "overwrite",
     ) -> Data:
         """Forecast a timeseries.
@@ -338,9 +399,7 @@ class ForecastingModel(BaseModel):
         pass
 
     def rolling_forecast(
-            self, T: int, batch_size=1, window_size=0,
-            train: bool = False,
-            side="before", collision: str ="overwrite"
+        self, T: int, batch_size=1, window_size=0, train: bool = False, side="before"
     ) -> Data:
         """Rolling forecast a timeseries.
 
@@ -354,20 +413,20 @@ class ForecastingModel(BaseModel):
         if side == "before":
             T = math.floor(T / batch_size) * batch_size
 
-        if T >= batch_size:
-            # first forecast overwriting observations
-            x = self.get_data(start_index=-window_size)
-            print(x)
-            self.set_data(self.get_data(start_index=-window_size))
-            self.forecast(batch_size, collision="overwrite")
-
-        print("you see me rolling")
+        initial_timestamps = pd.DataFrame()
         # start at last forecast timestamp
-        for _ in range(batch_size, T, batch_size):
-            x = self.get_data(start_index=-window_size)
-            print(x)
+        rolling_forecast = pd.DataFrame()
+        for _ in range(0, T, batch_size):
+            # input
             self.set_data(self.get_data(start_index=-window_size))
-            self.forecast(batch_size, collision="update")
+            if train:
+                self.train()
+            self.forecast(batch_size, reset_timestamp=False, collision="update")
+
+            # output
+            forecast = self.get_data(start_index=-batch_size)
+            rolling_forecast = pd.concat([rolling_forecast, forecast])
+        self.set_data(rolling_forecast)
         return self.get_data()
 
 

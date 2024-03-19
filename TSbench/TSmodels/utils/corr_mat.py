@@ -1,4 +1,5 @@
 """Correlation matrix wrapper for numpy array."""
+
 from __future__ import annotations
 import numpy as np
 from numpy.random import Generator

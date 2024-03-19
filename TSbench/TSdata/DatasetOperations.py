@@ -64,7 +64,7 @@ def dataset_csv2pqt(
 
 
 def merge_dataset(
-    loaders: "LoaderTSdf", merge_path: str, **merge_loader_args: any
+    loaders: list["LoaderTSdf"], merge_path: str, **merge_loader_args: any
 ) -> "LoaderTSdf":
     """Merge dataset assuming no shared dataype.
 
@@ -98,16 +98,16 @@ def merge_dataset(
             raise ValueError(
                 "The merge path needs to be distinct " + "from the path of all loaders."
             )
-        for filename in os.listdir(loader.path):
-            if filename == "metadata.pqt":
-                src = os.path.join(loader.path, filename)
-                dst = os.path.join(merge_path, "metadata-" + str(i) + ".pqt")
-                shutil.copyfile(src, dst)
-                i += 1
-            else:
-                src = os.path.join(loader.path, filename)
-                dst = os.path.join(merge_path, filename)
-                shutil.copyfile(src, dst)
+    for filename in os.listdir(loader.path):
+        if filename == "metadata.pqt":
+            src = os.path.join(loader.path, filename)
+            dst = os.path.join(merge_path, "metadata-" + str(i) + ".pqt")
+            shutil.copyfile(src, dst)
+            i += 1
+        else:
+            src = os.path.join(loader.path, filename)
+            dst = os.path.join(merge_path, filename)
+            shutil.copyfile(src, dst)
 
     merge_loader.merge_metadata(write_metadata=True, rm=True)
     return merge_loader
