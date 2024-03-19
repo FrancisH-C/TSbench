@@ -61,7 +61,8 @@ def test_operations():
         path=multiprocess_path, datatype=multiprocess_datatype, permission=permission
     )
 
-    os.rmdir(copy_path)
+    if os.path.exists(copy_path):
+        os.rmdir(copy_path)
     data_loader.copy_dataset(copy_path)
 
     data_loader.move_dataset(move_path)
