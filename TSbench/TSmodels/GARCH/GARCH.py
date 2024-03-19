@@ -6,6 +6,7 @@ from numpy import random as rand
 
 from TSbench.TSmodels.models import GeneratorModel
 
+
 class GARCH(GeneratorModel):
     """Generate outputs using the GARCH models within a simulation.
 

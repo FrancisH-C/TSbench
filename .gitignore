@@ -1,5 +1,8 @@
 # no images
-.png
+*.png
+*.pqt
+*.pkl
+*.json
 
 # ignore simulted data
 data/

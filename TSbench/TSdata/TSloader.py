@@ -1,15 +1,15 @@
 from __future__ import annotations
 from abc import ABC
-import logging
+import pandas as pd
+import numpy as np
 import math
 import os
 import shutil
+import logging
 from typing import Callable
 
 from TSbench.TSdata.DataFormat import convert_to_TSdf
 from joblib import Parallel, delayed
-import numpy as np
-import pandas as pd
 
 
 class TSloader(ABC):
@@ -492,7 +492,7 @@ class LoaderTSdf(TSloader):
     def merge_splitted_files(
         loader, n_jobs, write_metadata: bool = True, rm: bool = True
     ) -> None:
-        if loader.permission == "read" and write:
+        if loader.permission == "read" and self.write:
             raise ValueError(
                 "You cannot write metadata while merging " + "with 'read' permission."
             )
