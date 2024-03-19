@@ -54,7 +54,7 @@ setup(
     url="https://github.com/FrancisH-C/TSbench.git",
     python_requires=">=3.8.0",
     extras_require=extras_require,
-    scripts=["setup_R.py"],
+    scripts=["scripts/setup_R.py"],
     packages=find_packages(),
     install_requires=install_requires,
     license="MIT",
