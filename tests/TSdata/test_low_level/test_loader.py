@@ -1,3 +1,4 @@
+from joblib.parallel import VALID_BACKEND_CONSTRAINTS
 import pandas as pd
 import numpy as np
 import os, shutil
@@ -72,7 +73,7 @@ def simple_loader():
 
 
 def test_loaderCSV():
-    """Simple loader for test."""
+    """Simple CSV loader for test."""
     path = "data/test_CSV"
     datatype = "simulated"
     permission = "overwrite"
@@ -98,6 +99,10 @@ def test_loaderCSV():
 
     loader.write()
     loader.load()
+
+
+# def test_loaderCSV():
+#     raise ValueError("To implement")
 
 
 def test_permission():
@@ -132,12 +137,10 @@ def test_permission():
     with pytest.raises(ValueError):
         loader.set_df(pd.DataFrame(columns=["ID", "timestamp"]))
 
-    # You can append but not overwrite
-    # loader.add_data(df.copy(), ID=ID, collision="append")
-    # with pytest.raises(ValueError):
-    #    loader.add_data(df.copy(), ID=ID, collision="overwrite")
-    # with pytest.raises(ValueError):
-    #    loader.add_feature(df.copy(), ID=ID, feature=feature)
+    with pytest.raises(ValueError):
+        loader.add_data(df.copy(), ID=ID, collision="overwrite")
+    with pytest.raises(ValueError):
+        loader.add_feature(df.copy(), ID=ID, feature=feature)
 
 
 def test_dataset_operations():
