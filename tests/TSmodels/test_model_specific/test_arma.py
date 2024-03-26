@@ -53,10 +53,6 @@
 #
 # # Are all points equals for the two models?
 # eq = np.linalg.norm(generated - sm_generated) <= (10 ** (-1))
-# print("test")
-# print(generated)
-# print("test")
-# print(sm_generated)
 # # assert eq
 #
 # np.random.default_rng(seed)
