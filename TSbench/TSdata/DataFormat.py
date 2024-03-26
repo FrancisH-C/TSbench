@@ -7,7 +7,7 @@ import numpy as np
 def convert_to_TSdf(data, ID=None, timestamp=None, dim_label=None, feature_label=None):
     if data is None or len(data) == 0:
         return
-    if type(data) is pd.DataFrame:
+    elif type(data) is pd.DataFrame:
         df = df_to_TSdf(
             data,
             ID=ID,
@@ -18,7 +18,7 @@ def convert_to_TSdf(data, ID=None, timestamp=None, dim_label=None, feature_label
     elif type(data) is list:
         # list of np.array
         if type(data[0]) is np.ndarray:
-            df = listnp_to_TSdf(
+            df = list_np_to_TSdff(
                 data,
                 ID=ID,
                 timestamp=timestamp,
@@ -34,15 +34,6 @@ def convert_to_TSdf(data, ID=None, timestamp=None, dim_label=None, feature_label
                 dim_label=dim_label,
                 feature_label=feature_label,
             )
-        # Alternative : list of arrays or list of list
-        # if type(data[0]) is np.ndarray or type(data[0]) is list:
-        #     df = listnp_to_TSdf(
-        #         data,
-        #         ID=ID,
-        #         timestamp=timestamp,
-        #         dim_label=dim_label,
-        #         feature_label=feature_label,
-        #     )
         else:  # non-nested list
             df = np_to_TSdf(
                 np.array(data),
@@ -100,9 +91,10 @@ def df_to_TSdf(df, ID=None, timestamp=None, dim_label=None, feature_label=None):
         if timestamp is None:
             T = df.shape[0] // len(dim_label)
             timestamp = list(range(0, T))
-            timestamp = np.transpose(
-                np.array([timestamp for _ in range(len(dim_label))])
-            ).flatten()
+        # format timestamp to fit DataFrame dimension
+        timestamp = np.transpose(
+            np.array([timestamp for _ in range(len(dim_label))])
+        ).flatten()
         df["timestamp"] = timestamp
 
     # ID
@@ -129,9 +121,14 @@ def df_to_TSdf(df, ID=None, timestamp=None, dim_label=None, feature_label=None):
     return df
 
 
-def listnp_to_TSdf(
+def list_np_to_TSdff(
     arr_list, df=None, ID=None, timestamp=None, dim_label=None, feature_label=None
 ):
+
+    # ID
+    if ID is None:
+        raise ValueError("Need an ID.")
+
     # df
     if df is None:
         df = pd.DataFrame()
@@ -140,20 +137,49 @@ def listnp_to_TSdf(
 
     # dim
     if dim_label is None:
-        dim_label = ["0"]
+        if arr_list[0].ndim < 2:
+            dim_label = ["0"]
+        else:
+            dim_label = [i for i in range(arr_list[0].shape[1])]
 
+    # default feature_label
     if feature_label is None:
-        feature_label = ["feature"]
+        feature_label = []
+        feature_id = 0
+        for arr in arr_list:
+            if arr.ndim < 3:
+                features = ["feature" + str(feature_id)]
+                feature_id += 1
+            else:
+                features = [
+                    "feature" + str(feature_id + i) for i in range(arr.shape[2])
+                ]
+                feature_id += arr.shape[2]
 
-    # ID
-    if ID is None:
-        raise ValueError("Need an ID.")
+            feature_label.extend(features)
 
-    if len(feature_label) != len(arr_list):
-        raise ValueError("feature_label needs the same length as arr_list.")
+    if len(feature_label) < len(arr_list):
+        raise ValueError(
+            "You need to have, at least, the same number of feature_label"
+            + " than the length of arr_list."
+        )
 
-    for i in range(len(feature_label)):
-        df[feature_label[i]] = arr_list[i].flatten()
+    # map feature_label to element in the list
+    feature_counter = 0
+    for arr in arr_list:
+        if arr.ndim < 3:
+            current_features = feature_label[feature_counter]
+            feature_counter += 1
+        else:
+            current_features = feature_label[feature_counter : arr.shape[2] + 1]
+            feature_counter += arr.shape[2]
+        df[current_features] = np_to_TSdf(
+            arr,
+            ID=ID,
+            timestamp=timestamp,
+            dim_label=dim_label,
+            feature_label=current_features,
+        )
 
     # Convert DataFrame to TSdf format
     df = df_to_TSdf(df, ID=ID, timestamp=timestamp, dim_label=dim_label)
@@ -163,6 +189,10 @@ def listnp_to_TSdf(
 def np_to_TSdf(
     arr, df=None, ID=None, timestamp=None, dim_label=None, feature_label=None
 ):
+    # ID
+    if ID is None:
+        raise ValueError("Need an ID.")
+
     # df
     if df is None:
         df = pd.DataFrame()
@@ -171,26 +201,35 @@ def np_to_TSdf(
 
     # dim
     if dim_label is None:
-        dim_label = ["0"]
+        if arr.ndim < 2:
+            dim_label = ["0"]
+        else:
+            dim_label = [i for i in range(arr.shape[1])]
 
     if feature_label is None:
-        feature_label = ["feature"]
-
-    # ID
-    if ID is None:
-        raise ValueError("Need an ID.")
+        if arr.ndim < 3:
+            feature_label = ["feature"]
+        else:
+            feature_label = ["feature" + str(i) for i in range(arr.shape[2])]
 
     # Insert feature_label into the DataFrame
-    if arr.ndim == 3 and len(dim_label) == arr.shape[-1]:
-        for i in range(len(dim_label)):
-            df[feature_label[i]] = arr[:, :, i].flatten()
-    elif arr.ndim == 2 and len(dim_label) == arr.shape[-1]:
-        df[feature_label[0]] = arr.flatten()
-    elif arr.ndim == 1:
+    # ndim 1
+    if arr.ndim == 1:
         df[feature_label[0]] = arr
+    elif arr.shape[1] == len(dim_label):
+        if arr.ndim == 2:  # ndim 2
+            df[feature_label[0]] = arr.flatten()
+        elif arr.ndim == 3 and arr.shape[2] == len(feature_label):  # ndim 3
+            for i in range(len(feature_label)):
+                df[feature_label[i]] = arr[:, :, i].flatten()
+        else:
+            raise ValueError(
+                f"'arr' along axis 2 is {arr.shape[2]} and 'feature_label' "
+                + f"is {len(feature_label)}. Need the same dimension."
+            )
     else:
         raise ValueError(
-            f"'arr' along axis 1 is {arr.shape[-1]} and 'dim_label' "
+            f"'arr' along axis 1 is {arr.shape[1]} and 'dim_label' "
             + f"is {len(dim_label)}. Need the same dimension."
         )
 
@@ -199,12 +238,12 @@ def np_to_TSdf(
     return df
 
 
-def dict_to_TSdf(results, ID=None, timestamp=None, dim_label=None):
+def dict_to_TSdf(data, ID=None, timestamp=None, dim_label=None):
     """Convert a dict to pandas DataFrame."""
     df = pd.DataFrame()
-    for feature in results:
+    for feature in data:
         df = np_to_TSdf(
-            results[feature],
+            data[feature],
             df,
             ID=ID,
             timestamp=timestamp,
