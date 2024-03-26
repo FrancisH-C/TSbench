@@ -34,7 +34,7 @@ The installation has been tested with `Python 3.10.0`.
 To install `pytest` and `setuptools`:
 
 ``` shell
-python -m pip install .[test]
+python3 -m pip install .[test]
 ```
 
 ## All dependencies
@@ -42,7 +42,7 @@ python -m pip install .[test]
 To install all dependencies:
 
 ``` shell
-python -m pip install .[all]
+python3 -m pip install .[all]
 ```
 
 ## R support
@@ -78,8 +78,8 @@ variable and restarting the terminal.
 ### Automatic setup
 
 ``` shell
-python -m pip install .[R]
-python setup_R.py
+python3 -m pip install .[R]
+python3 setup_R.py
 ```
 
 # Windows
@@ -117,9 +117,9 @@ You can add the environment to `Jupyter` by executing the following
 command:
 
 ``` shell
-python -m pip install ipykernel
-python -m pip install ipython
-python -m ipykernel install --name TSbench --user
+python3 -m pip install ipykernel
+python3 -m pip install ipython
+python3 -m ipykernel install --name TSbench --user
 ```
 
 ## Troubleshooting
@@ -153,7 +153,7 @@ documentation: <https://docs.python.org/3/library/venv.html>.
 
 ``` shell
 python -m pip install virtualenv
-python -m virtualenv -p python3 $HOME/.venv/TSbench
+python -m virtualenv $HOME/.venv/TSbench
 ```
 
 ### Activate
@@ -181,7 +181,7 @@ python -m ipykernel install --name TSbench --user
 
 ### Manual setup
 
-If you don't like `setup~R.py` or if you don't use the integration with
+If you don't like `setup_R.py` or if you don't use the integration with
 rpy2, you can use a custom R setup. Here are presented the steps based
 on `Setup_R.py` as a starting point.
 
