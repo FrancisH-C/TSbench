@@ -24,13 +24,11 @@ output_loader = LoaderTSdf(path="data/test_experiment/", datatype="experiment")
 #     exp = Experiment(output_loader=output_loader, process_functions=generate_functions)
 #
 #     exp.run_experiment()
-#     print(exp.output_loader.df)
 #
 #
 # def test_forecast_experiment():
 #     def forecast_constant(data):
 #         T = 10
-#         print(data)
 #         # Constant Model
 #         cnst_model = TSmodels.Constant(dim=1)
 #         # generate

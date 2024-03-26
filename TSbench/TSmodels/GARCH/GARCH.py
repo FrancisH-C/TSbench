@@ -26,16 +26,14 @@ class GARCH(GeneratorModel):
 
     def __init__(
         self,
-        A: np.ndarray | NoneType = None,
+        A: np.ndarray = None,
         B: np.array = None,
         C: np.array = None,
         drift: int = 0,
         **model_args,
     ) -> None:
         """Initialize GARCH."""
-        super().__init__(**model_args, default_features=["returns", "vol"])
-        if len(self.feature_label) != 2 * self.dim:
-            raise ValueError("Need 'feature_label' with `self.dim + 1` entries")
+        super().__init__(**model_args)
 
         # parameters for the model
         if self.lag is None and (A is None or B is None):
@@ -88,6 +86,16 @@ class GARCH(GeneratorModel):
         else:
             self.C = C
 
+    def set_feature_label(self, feature_label=None):
+        if feature_label is None:
+            if self.dim > 1:
+                feature_label = ["retuns"] + ["vol" + str(i) for i in range(self.dim)]
+            else:
+                feature_label = ["retuns"] + ["vol"]
+        if len(feature_label) != self.dim + 1:
+            raise ValueError("Need 'feature_label' with `self.dim + 1` entries")
+        self.feature_label = feature_label
+
     def generate(
         self, N: int, reset_timestamp=False, collision: str = "overwrite"
     ) -> Data:
@@ -102,14 +110,14 @@ class GARCH(GeneratorModel):
                 - {"vol"  : np.array of vol}.
         """
         # initial value
-        initial = self.get_data(format=np.ndarray)
-        epsilon = np.zeros(N - initial.shape[0])
-        vol = np.zeros(N - initial.shape[0])
+        initial = self.get_data(tstype=np.ndarray)
+        epsilon = np.zeros((N - initial.shape[0], self.dim))
+        vol = np.zeros((N - initial.shape[0], self.dim))
 
         if initial.size != 0:
             # add initial to epsilon and vol
-            epsilon = np.concatenate((initial[:, 0], epsilon))
-            vol = np.concatenate((initial[:, 1], vol))
+            epsilon = np.concatenate((initial[:, :, 0], epsilon), axis=0)
+            vol = np.concatenate((initial[:, :, 1], vol), axis=0)
 
         z = rand.standard_normal(N)
 

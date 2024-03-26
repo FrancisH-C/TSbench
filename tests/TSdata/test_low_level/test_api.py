@@ -36,10 +36,10 @@ def test_low_level():
 
     feature = "added_feature"
     d_feature = {
-        "timestamp": list(map(str, range(0, 4))),
-        "ID": [ID for _ in range(4)],
-        "dim": ["0" for _ in range(4)],
-        feature: list(range(10, 14)),
+        "timestamp": list(map(str, range(0, 5))),
+        "ID": [ID for _ in range(5)],
+        "dim": ["0" for _ in range(5)],
+        feature: list(range(10, 15)),
     }
     df_feature = pd.DataFrame(data=d_feature)
 
