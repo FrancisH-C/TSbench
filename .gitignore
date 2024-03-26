@@ -1,3 +1,5 @@
+pyproject.toml
+
 # no images
 *.png
 *.pqt
