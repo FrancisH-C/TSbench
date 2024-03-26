@@ -11,8 +11,7 @@ class Constant(Model):
 
     def __init__(self, constant: np.ndarray = None, **model_args) -> None:
         """Initialize Constant."""
-        super().__init__()
-        super().__init__(default_features=["returns"], **model_args)
+        super().__init__(**model_args)
         if constant is None:
             constant = self.rg.uniform(low=0, high=1, size=self.dim)
         self.constant = constant
