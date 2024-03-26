@@ -49,12 +49,10 @@ class BaseModel(ABC):
         point_process=None,
         dim_label: list[str] = None,
         feature_label: list[str] = None,
-        default_features: list[str] = ["returns"],
     ) -> None:
         """Initialize BaseModel."""
         self.dim = dim
         self.lag = lag
-        self.default_features = default_features
 
         if loader is None:
             self.loader = LoaderTSdf(datatype="Simulated")
@@ -63,7 +61,8 @@ class BaseModel(ABC):
         self.set_random_generator(rg)
         self.set_corr_mat(corr_mat)
         self.set_feature_label(feature_label)
-        self.set_dim_label(dim_label=self.set_point_process())
+        self.set_dim_label(dim_label=dim_label)
+        self.set_point_process()
 
     def set_name(self, name=None):
         self._name = name
@@ -88,27 +87,11 @@ class BaseModel(ABC):
             corr_mat.set_mat()
             self.corr_mat = corr_mat
 
-    def default_feature_label(self):
-        if self.dim > 1:
-            return [
-                self.default_features[i] + str(j)
-                for i in range(len(self.default_features))
-                for j in range(self.dim)
-            ]
-        else:
-            return [self.default_features[i] for i in range(len(self.default_features))]
-
-        return [
-            self.default_features[i] + str(j)
-            for i in range(len(self.default_features))
-            for j in range(self.dim)
-        ]
-
     def set_feature_label(self, feature_label=None):
         if feature_label is None:
-            feature_label = self.default_feature_label()
-        # elif len(feature_label) != len(self.default_features) * self.dim:
-        #    raise ValueError("Need `nb_features` entry(ies) for 'feature_label'")
+            feature_label = ["returns"]
+        if len(feature_label) != 1:
+            raise ValueError("Need 'feature_label' with 1 entry")
         self.feature_label = feature_label
 
     def set_dim_label(self, dim_label=None):
@@ -138,7 +121,7 @@ class BaseModel(ABC):
 
     def get_data(
         self,
-        format: type = LoaderTSdf,
+        tstype: type = pd.DataFrame,
         start=None,
         start_index=None,
         end=None,
@@ -152,7 +135,7 @@ class BaseModel(ABC):
         For format LoaderTSdf return the time series
         For format other than LoaderTSdf, returns only the observations of the time series.
         """
-        data = self.loader.get_timeseries(
+        return self.loader.get_timeseries(
             IDs=[str(self)],
             start=start,
             start_index=start_index,
@@ -161,13 +144,8 @@ class BaseModel(ABC):
             timestamps=timestamps,
             dims=dims,
             features=features,
+            tstype=tstype,
         )
-        if format is LoaderTSdf:
-            return data
-        if format is np.ndarray:
-            return data.to_numpy()
-        if format is pd.DataFrame:
-            return data
 
     def rm_data(self, timestamps):
         self.loader.df.drop(index=timestamps, level="timestamp", inplace=True)
@@ -185,15 +163,14 @@ class BaseModel(ABC):
             self.point_process.set_current_timestamp(current_timestamp=0)
             self.loader.add_data(data=None, ID=str(self), collision=collision)
             return self.get_data()
-
         if reset_timestamp:
             self.point_process.set_current_timestamp(current_timestamp=0)
         else:
             self.point_process.set_current_timestamp(
                 current_timestamp=self.get_timestamp(start_index=-1)[0] + 1
             )
-
         timestamp = self.point_process.generate_timestamp(nb_points=size(data))
+
         self.loader.add_data(
             data=data,
             ID=str(self),
@@ -444,10 +421,10 @@ class Model(GeneratorModel, ForecastingModel):
         """Initialize Model."""
         super().__init__(**model_args)
 
-    def generate_mode():
+    def generate_mode(self):
         self.generate_mode = True
         self.forecast_mode = False
 
-    def forecast_mode():
+    def forecast_mode(self):
         self.forecast_mode = True
         self.generate_mode = False

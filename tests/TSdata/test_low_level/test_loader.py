@@ -28,7 +28,6 @@ def same_data(df1, df2, debug=False):
             y = df2.loc[index][feature]
 
             # if type(x) is pd.Series:
-            #    print("jfdksfljd")
             #    x = x.values
             # if type(y) is pd.Series:
             #    y = y.values

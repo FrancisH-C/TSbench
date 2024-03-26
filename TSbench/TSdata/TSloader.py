@@ -701,6 +701,7 @@ class LoaderTSdf(TSloader):
         timestamps=None,
         dims=None,
         features=None,
+        tstype=pd.DataFrame,
     ):
         """Get DataFrame for the datatype.
 
@@ -751,7 +752,7 @@ class LoaderTSdf(TSloader):
         # set index back
         df.set_index(["ID", "timestamp", "dim"], drop=True, inplace=True)
 
-        return df[features]
+        return convert_from_TSdf(df[features], tstype)
 
     def get_split_pattern(
         self,
@@ -961,8 +962,11 @@ class LoaderTSdf(TSloader):
     def get_IDs(self):
         return self.metadata.loc[self.datatype, "IDs"]
 
-    def get_dim_label(self, ID):
-        return self.get_df(IDs=[ID]).index.get_level_values("dim").unique()
+    def get_dim_label(self, ID=None):
+        if ID is None:
+            return self.get_df().index.get_level_values("dim").unique()
+        else:
+            return self.get_df(IDs=[ID]).index.get_level_values("dim").unique()
 
     def add_data(
         self,
@@ -1036,8 +1040,12 @@ class LoaderTSdf(TSloader):
             if collision == "ignore":
                 return
             elif collision == "overwrite" and self.permission == "overwrite":
-                self.rm_ID(ID, rm_from_metadata=False)  # Keep metadata
-                self.df = df.combine_first(self.df)
+                if len(self.get_IDs()) == 1:
+                    self.rm_ID(ID, rm_from_metadata=False)  # Keep metadata
+                    self.df = df
+                else:
+                    self.rm_ID(ID, rm_from_metadata=False)  # Keep metadata
+                    self.df = df.combine_first(self.df)
             else:
                 raise ValueError(
                     "Trying to 'overwrite' an ID without permission; "
@@ -1465,3 +1473,33 @@ class LoadersProcess:
             loaders.append(loader)
 
         self.loaders = loaders
+
+
+# This function is DataFormat but needs TSdf. Needs refactoring
+def convert_from_TSdf(df, tstype):
+    if df is None or df.size == 0:
+        return
+    elif tstype is pd.DataFrame:
+        return df
+    elif tstype is np.ndarray:
+        dim_label = df.index.get_level_values("dim").unique()
+        features = df.columns
+        if len(features) == 1 and len(dim_label) == 1:  # ndim == 1
+            return df.to_numpy()[:]
+        timestamps = df.index.get_level_values("timestamp").unique()
+
+        if len(features) == 1:  # ndim == 2
+            # ndim == 2
+            arr = np.zeros((len(timestamps), len(dim_label)))
+            for j in range(len(dim_label)):
+                arr[:, j] = df.loc[:, :, dim_label[j]].to_numpy()[:, 0]
+
+            return arr
+        else:  # len(features) >= 2: i.e. ndim == 3
+            arr = np.zeros((len(timestamps), len(dim_label), len(features)))
+            for k in range(len(features)):
+                for j in range(len(dim_label)):
+                    arr[:, j, k] = df.loc[:, :, dim_label[j]][features[k]].to_numpy()
+            return arr
+    else:
+        raise ValueError("Not a valid timeseries datatype")
