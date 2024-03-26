@@ -35,44 +35,21 @@ class VEC_GARCH(GARCH):
                 - {"vol"  : np.array of vol}.
         """
         # initialization
-        epsilon, vol = self.initial_state_default(N)
-        z = rand.standard_normal(size=(self.dim, N))
+        epsilon = np.zeros((N, self.dim))
+        vol = np.zeros((N, self.dim, self.dim))
+        for t in range(N):
+            vol[t, :, :] = np.eye(self.dim, self.dim)
+        z = rand.standard_normal(size=(N, self.dim))
 
         # generate observations
-        for t in range(self.init_length(), N):
+        for t in range(self.lag, N):
             vol[t, :, :] = (
                 self.C + self.generate_ma(epsilon, t) + self.generate_ar(vol, t)
             )
             vol[t, :, :] = cholesky(vol[t, :, :])
-            epsilon[:, t] = np.dot(vol[t, :, :], z[:, t])
+            epsilon[t, :] = np.dot(vol[t, :, :], z[t, :])
 
-        print(self.feature_label)
-        print(epsilon[0, :])
-        print(epsilon[1, :])
-        print(vol[0, :])
-        print(vol[1, :])
-
-        print(self.dim_label)
-        self.set_data(data=vol)
-
-        # self.generated = {"returns": epsilon, "vol": vol}
-        # return self.set_data(data=[np.array(epsilon[0]), np.array(epsilon[1]), np.array(vol[0]), np.array(vol[1])], collision=collision)
-
-    def initial_state_default(self, T: int) -> tuple[np.array, np.array]:
-        """Generate inital state as zero returns and identity variance matrix.
-
-        Args:
-            T (int): Number of observations to generate.
-
-        Returns:
-            tuple[np.array,np.array] : A tupple (returns, vol).
-
-        """
-        epsilon = np.zeros((self.dim, T))
-        vol = np.zeros((T, self.dim, self.dim))
-        for t in range(T):
-            vol[t, :, :] = np.eye(self.dim, self.dim)
-        return epsilon, vol
+        return self.set_data(data=[epsilon, vol], collision=collision)
 
     def generate_ar(self, vol: np.array, t: int) -> np.array:
         """Generate the VEC-GARCH autoregressive process.
@@ -108,7 +85,7 @@ class VEC_GARCH(GARCH):
         y = np.zeros((self.dim, self.dim))
         for j in range(0, self.q):
             y += np.matmul(
-                self.A[j, :, :], np.outer(epsilon[:, t - j - 1], epsilon[:, t - j - 1])
+                self.A[j, :, :], np.outer(epsilon[t - j - 1, :], epsilon[t - j - 1, :])
             )
         return y
 
@@ -126,7 +103,9 @@ class SPD_VEC_GARCH(VEC_GARCH):
         """Initialize SPC_VEC_GARCH."""
         super().__init__(**garch_args)
 
-    def generate(self, T: int) -> dict[str, np.array]:
+    def generate(
+        self, N: int, reset_timestamp=False, collision: str = "overwrite", verbose=False
+    ) -> Data:
         """Generate `T` values using SPD-VEC-GARCH.
 
         Args:
@@ -138,12 +117,15 @@ class SPD_VEC_GARCH(VEC_GARCH):
                 - {"vol"  : np.array of vol}
         """
         # initialization
-        epsilon, vol = self.initial_state_default(T)
-        z = rand.standard_normal(size=(self.dim, T))
+        epsilon = np.zeros((N, self.dim))
+        vol = np.zeros((N, self.dim, self.dim))
+        for t in range(N):
+            vol[t, :, :] = np.eye(self.dim, self.dim)
+        z = rand.standard_normal(size=(N, self.dim))
 
         # generate observations
         translations = 0
-        for t in range(self.init_length(), T):
+        for t in range(self.lag, N):
             vol[t, :, :] = (
                 self.C + self.generate_ma(epsilon, t) + self.generate_ar(vol, t)
             )
@@ -157,21 +139,19 @@ class SPD_VEC_GARCH(VEC_GARCH):
                 # add the smallest egeinvalue to diagonal plus an epsilon to account for
                 # machine error.
                 vol[t, :, :] -= eigenvalues[0] * (
-                    np.eye(np.size(vol, 1)) + 2 * 10 ** (-6)
+                    np.eye(np.size(vol, 1)) + 2  # * 10 ** (-6)
                 )
                 translations += 1
 
             vol[t, :, :] = cholesky(vol[t, :, :])
-            epsilon[:, t] = np.matmul(vol[t, :, :], z[:, t])
-        if translations > 0:
+            epsilon[t, :] = np.matmul(vol[t, :, :], z[t, :])
+        if translations > 0 and verbose:
             print(
                 "Number of translations to make matrix positive definite :",
                 translations,
             )
-        self.generated = [np.transpose(epsilon)] + [
-            vol[:, :, i] for i in range(self.dim)
-        ]
-        return self.generated
+
+        return self.set_data(data=[epsilon, vol], collision=collision)
 
     def generate_ar(self, vol: np.array, t: int) -> np.array:
         """Generate the VEC-GARCH autoregressive process.
@@ -207,12 +187,12 @@ class SPD_VEC_GARCH(VEC_GARCH):
         y = np.zeros((self.dim, self.dim))
         for j in range(0, self.q):
             y += np.dot(
-                self.A[j, :, :], np.outer(epsilon[:, t - j - 1], epsilon[:, t - j - 1])
+                self.A[j, :, :], np.outer(epsilon[t - j - 1, :], epsilon[t - j - 1, :])
             )
         return y
 
     def __repr__(self) -> str:
-        """ARMA info and dimension."""
+        """VGARCH info and dimension."""
         name = super().__str__()
         info = "(" + str(self.p) + ", " + str(self.q) + ", dim=" + str(self.dim) + ")"
         return name + info

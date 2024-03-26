@@ -10,10 +10,10 @@ from scipy.special import comb
 from TSbench.TSmodels import Model
 
 from statsmodels.tsa.arima.model import ARIMA
+
+# from statsmodels.regression.linear_model import OLS
 import statsmodels.api as sm
 import warnings
-
-warnings.simplefilter("ignore")
 
 
 class ARMA(Model):
@@ -49,7 +49,7 @@ class ARMA(Model):
         **model_args,
     ) -> None:
         """Initialize ARMA."""
-        super().__init__(default_features=["returns"], **model_args)
+        super().__init__(**model_args)
         if self.lag is None and (
             (p is None and ar is None) or (q is None and ma is None)
         ):
@@ -109,7 +109,7 @@ class ARMA(Model):
             np.array: returns
         """
         # initial value
-        initial = self.get_data()
+        initial = self.get_data(tstype=np.ndarray)
         x = np.zeros((N - initial.shape[0], self.dim))
         if initial.size != 0:
             # add initial to x
@@ -144,9 +144,8 @@ class ARMA(Model):
                 self.ar[:, :], x[:, t - self.p : t + 1]
             )  # x_{t-i-j}
 
-        data = [np.transpose(x)[:, i] for i in range(self.dim)]
         return self.set_data(
-            data=data, reset_timestamp=reset_timestamp, collision=collision
+            data=np.transpose(x), reset_timestamp=reset_timestamp, collision=collision
         )
 
     def flipped_dot_dimension_wise(self, a: np.array, b: np.array) -> np.array:
@@ -310,15 +309,16 @@ class ARMA(Model):
             Model: Trained ARMA model.
 
         """
+        warnings.simplefilter("ignore")
         if self.dim == 1:
             self.sm_arma = ARIMA(
-                self.get_data(format=np.ndarray), order=(self.p, self.d, self.q)
+                self.get_data(tstype=np.ndarray), order=(self.p, self.d, self.q)
             ).fit()
             self.sm_arma.remove_data()
         else:
-            self.sm_arma = sm.tsa.VARMAX(
-                self.get_data(format=np.ndarray), order=(self.p, self.q)
-            ).fit(disp=False)
+            data = self.get_data(tstype=np.ndarray)
+            self.sm_arma = sm.tsa.VARMAX(data, order=(self.p, self.q)).fit(disp=False)
+
             # `remove_data` cause en error whenever apply is reused later
             # to get the data back. This is why this is used instead.
             removed = np.empty((1, self.dim), dtype=int)
@@ -358,11 +358,11 @@ class ARMA(Model):
                 == "int64"  # more complex multivariate
             ):
                 self.sm_arma = self.sm_arma.apply(
-                    endog=self.get_data(format=np.ndarray)
+                    endog=self.get_data(tstype=np.ndarray)
                 )
             else:
                 self.sm_arma = self.sm_arma.append(
-                    endog=self.get_data(format=np.ndarray)
+                    endog=self.get_data(tstype=np.ndarray)
                 )
 
             return
@@ -374,7 +374,7 @@ class ARMA(Model):
 
         # numpy idiosyncratic detail :
         # (n,) array \neq (n,1) array, hence the reshape
-        data = [forecast.reshape(-1, self.dim)[:, i] for i in range(self.dim)]
+        # data = [forecast.reshape(-1, self.dim)[:, i] for i in range(self.dim)]
         return self.set_data(
-            data=data, reset_timestamp=reset_timestamp, collision=collision
+            data=forecast, reset_timestamp=reset_timestamp, collision=collision
         )
