@@ -33,7 +33,7 @@ install_requires = [
 ]
 
 extras_require = {
-    "test": ["pytest", "setuptools"],
+    "test": ["flake8", "pytest", "setuptools"],
 }
 
 extras_require["default"] = list(set(x for lst in extras_require.values() for x in lst))
