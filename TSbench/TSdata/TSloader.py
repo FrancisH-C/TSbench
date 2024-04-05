@@ -1230,22 +1230,21 @@ class LoaderTSdfCSV(LoaderTSdf):
         if os.path.isfile(metadata_file):
             self.metadata = pd.read_csv(metadata_file)
             self.metadata.set_index(["datatype"], inplace=True, drop=True)
+            # pd.read_csv gives string, parse it as np.ndarray
+            for index in self.metadata.index:
+                for column in self.metadata.columns:
+                    arr = self.metadata.at[index, column]
+                    if isinstance(arr, str):
+                        # parse string
+                        arr = re.sub(pattern=" ", repl=",", string=arr)
+                        arr = np.array(ast.literal_eval(arr))
+                        # change value to np.ndarray
+                        self.metadata.at[index, column] = arr
         else:
             self.metadata = pd.DataFrame(
-                index=pd.Index(["datatype"]),
                 columns=pd.Index(["IDs", "features", "split_pattern"]),
             )
 
-        # pd.read_csv gives string, parse it as np.ndarray
-        for index in self.metadata.index:
-            for column in self.metadata.columns:
-                arr = self.metadata.at[index, column]
-                if isinstance(arr, str):
-                    # parse string
-                    arr = re.sub(pattern=" ", repl=",", string=arr)
-                    arr = np.array(ast.literal_eval(arr))
-                    # change value to np.ndarray
-                    self.metadata.at[index, column] = arr
         return self.metadata
 
     def write_metadata(self) -> None:

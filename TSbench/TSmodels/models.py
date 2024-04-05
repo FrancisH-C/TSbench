@@ -13,9 +13,8 @@ import numpy as np
 import pandas as pd
 from numpy.random import PCG64, Generator
 
-from TSbench.TSdata.TSloader import LoaderTSdf, TSloader
-
 from TSbench.TSdata.data import AnyData, Data, size
+from TSbench.TSdata.TSloader import LoaderTSdf, TSloader
 from TSbench.TSmodels.point_process import Deterministic, PointProcess
 from TSbench.TSmodels.utils.corr_mat import Corr_mat
 

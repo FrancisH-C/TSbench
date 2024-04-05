@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+from typing import Callable, Optional
+
 import numpy as np
 from numpy.random import PCG64, Generator
-from typing import Optional, Callable
 
 
 class Corr_mat:

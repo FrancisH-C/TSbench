@@ -3,9 +3,9 @@
 Install required R packages assuming the dependencies are met.
 """
 
+import importlib.util
 import os
 from pathlib import Path
-import importlib.util
 
 home = Path.home()
 r_environ = os.path.join(home, ".Renviron")

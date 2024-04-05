@@ -1,13 +1,14 @@
 import os
+
 import numpy as np
 import pandas as pd
-from TSbench.TSdata import LoaderTSdf, DatasetOperations
+
+from TSbench.TSdata import DatasetOperations, LoaderTSdf
 
 
 def test_operations():
     path = "data/example_operations/data"
     datatype = "simulated"
-    split = ["0", "1"]
     permission = "overwrite"  # Overwrite is used for repeated execution
     loader = LoaderTSdf(path=path, datatype=datatype, permission=permission)
     loader.restart_dataset()  # fresh re-run

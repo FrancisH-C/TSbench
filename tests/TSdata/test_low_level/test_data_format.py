@@ -1,13 +1,14 @@
 ### Format different data for TSdf.
 import numpy as np
 import pandas as pd
-from TSbench.TSdata.TSloader import LoaderTSdf, convert_from_TSdf
+
 from TSbench.TSdata.DataFormat import (
-    np_to_TSdf,
-    list_np_to_TSdf,
-    dict_to_TSdf,
     df_to_TSdf,
+    dict_to_TSdf,
+    list_np_to_TSdf,
+    np_to_TSdf,
 )
+from TSbench.TSdata.TSloader import LoaderTSdf, convert_from_TSdf
 
 
 def test_simple_types_data_format():

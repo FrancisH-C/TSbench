@@ -1,12 +1,13 @@
 #!/usr/bin/env python
 from __future__ import annotations
 
+from typing import Optional
+
 import numpy as np
 from numpy import random as rand
 
-from TSbench.TSmodels.models import GeneratorModel
-from typing import Optional
 from TSbench.TSdata.data import AnyData
+from TSbench.TSmodels.models import GeneratorModel
 
 
 class GARCH(GeneratorModel):

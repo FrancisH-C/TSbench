@@ -1,8 +1,9 @@
-import pytest
 import numpy as np
-from TSbench.TSdata import LoaderTSdf
+import pytest
+from numpy.random import PCG64, Generator
+
 from TSbench import TSmodels
-from numpy.random import Generator, PCG64
+from TSbench.TSdata import LoaderTSdf
 
 
 def test_data_to_reprodue():
@@ -311,8 +312,6 @@ def test_MGARCH():
     dim = 2
     rg = Generator(PCG64(seed))
     vec_garch = TSmodels.VEC_GARCH(dim=dim, lag=lag, rg=rg)
-    timeseries = vec_garch.generate(N=N)
-    vec_garch.set_data(data=timeseries)
     vec_garch.generate(N=N)
 
     # VEC_SPD_GARCH

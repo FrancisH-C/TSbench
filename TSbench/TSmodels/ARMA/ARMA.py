@@ -6,8 +6,6 @@ import warnings
 from typing import Any, Dict, Optional
 
 import numpy as np
-
-# from statsmodels.regression.linear_model import OLS
 import statsmodels.api as sm
 from scipy.special import comb
 from statsmodels.tsa.arima.model import ARIMA

@@ -1,6 +1,6 @@
 """Define the Data type used for models."""
 
-from typing import Union, TypeVar
+from typing import TypeVar, Union
 
 import numpy as np
 import pandas as pd

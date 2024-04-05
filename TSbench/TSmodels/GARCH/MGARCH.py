@@ -1,15 +1,14 @@
 from __future__ import annotations
 
-from typing import Callable
+from typing import Callable, Optional
 
 import numpy as np
 from numpy import random as rand
 from numpy.linalg import cholesky
 
+from TSbench.TSdata.data import AnyData
 from TSbench.TSmodels.GARCH import GARCH
 from TSbench.TSmodels.models import GeneratorModel
-from TSbench.TSdata.data import AnyData
-from typing import Optional
 
 
 class VEC_GARCH(GARCH):

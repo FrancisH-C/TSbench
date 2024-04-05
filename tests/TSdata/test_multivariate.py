@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
-from TSbench.TSdata import LoaderTSdf, DataFormat
+
+from TSbench.TSdata import DataFormat, LoaderTSdf
 
 
 def test_multivariate():

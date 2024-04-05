@@ -1,6 +1,6 @@
+from abc import abstractmethod
 from typing import Optional
 
-from abc import abstractmethod
 import numpy as np
 from numpy.random import PCG64, Generator
 

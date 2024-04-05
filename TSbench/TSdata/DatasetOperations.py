@@ -10,9 +10,7 @@ from __future__ import annotations
 
 import os
 import shutil
-from typing import Any, Callable, Optional
-
-import pandas as pd
+from typing import Any
 
 from TSbench.TSdata.TSloader import LoaderTSdf
 

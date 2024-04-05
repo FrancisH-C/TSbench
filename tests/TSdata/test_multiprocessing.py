@@ -1,7 +1,9 @@
+import logging
+
 import numpy as np
 import pandas as pd
-from TSbench.TSdata import LoaderTSdf, LoadersProcess
-import logging
+
+from TSbench.TSdata import LoadersProcess, LoaderTSdf
 
 
 def test_multiprocessing():

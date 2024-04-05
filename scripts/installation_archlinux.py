@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 
+import argparse
 import subprocess
 import sys
-import argparse
+
 from scripts import setup_R
 
 
