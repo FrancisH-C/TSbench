@@ -4,19 +4,20 @@
 # https://medium.com/@remycanario17/update-converting-python-dataframes-to-r-with-rpy2-59edaef63e0e
 
 from __future__ import annotations
-import os
-import numpy as np
-import pandas as pd
 
-import rpy2
+import os
+from abc import abstractmethod
+
+import pandas as pd
 from rpy2 import robjects as ro
 
-from TSbench.TSmodels import ForecastingModel
+from TSbench.TSdata.data import AnyData
+from TSbench.TSmodels.models import ForecastingModel
 from TSbench.TSmodels.R.Rpath import Rmodels_path
 
 # Defining the R script and loading the instance in Python
-r = rpy2.robjects.r
-r["source"](os.path.normpath(os.path.join(Rmodels_path, "rGARCH.R")))
+r = ro.r
+r["source"](os.path.normpath(os.path.join(Rmodels_path, "rGARCH.R")))  # type: ignore
 
 
 class rGARCH(ForecastingModel):
@@ -43,12 +44,16 @@ class rGARCH(ForecastingModel):
         # Loading the function we have defined in R.
         # Careful with naming since the global environment is used
         # !!! Don't use the same name for functions in R
-        train_GARCH_r = rpy2.robjects.globalenv["train_ruGARCH"]
+        train_GARCH_r = ro.globalenv["train_ruGARCH"]
         # Invoking the R function and getting the result
         train_GARCH_r(series_r, self.lag, self.lag)
         return self
 
+    @abstractmethod
     def forecast(
-        self, serie: pd.DataFrame, start_index: int, T: int, retrain: bool = False
-    ) -> dict[str, np.array]:
+        self,
+        T: int,
+        reset_timestamp: bool = False,
+        collision: str = "overwrite",
+    ) -> AnyData:
         pass

@@ -1,71 +1,25 @@
-"""DataFormat module.
+"""Operations on dataset to transform data set.
 
-These are example of how to format data.
+- csv -> pqt
+- pqt -> csv
+- Merge multiple datasets into one
 
 """
 
 from __future__ import annotations
-from TSbench.TSdata.TSloader import LoaderTSdf
+
 import os
-import pandas as pd
 import shutil
+from typing import Any, Callable, Optional
 
+import pandas as pd
 
-def csv2pqt(
-    path: str,
-    filename: str,
-    process_function: callable[[pd.DataFrame], None] = None,
-    **loader_args: any,
-) -> None:
-    """Format a file from csv to pqt.
-
-    Args:
-        path (str): Path of the file.
-        filename (str): Name of the file.
-        process_function (callable[[pd.DataFrame]) : None] ) : Default is  None.
-            A function to processs the data
-        **loader_args (any): Keyword arguments for the loader.
-
-    """
-    datatype, ext = os.path.splitext(filename)
-    if ext != ".csv":
-        raise ValueError("`Filename` should be a csv file")
-
-    loader = LoaderTSdf(path=path, datatype=datatype, **loader_args)
-    df = pd.read_csv(os.path.join(path, filename))
-
-    # process the data
-    if process_function is not None:
-        process_function(df)
-
-    loader.add_datatype(df)
-    loader.write()
-
-
-def dataset_csv2pqt(
-    path: str,
-    process_function: callable[[pd.DataFrame], None] = None,
-    **loader_args: any,
-) -> None:
-    """Format files in path from csv to pqt.
-
-    Args:
-        path (str): Path of the file.
-        filename (str): Name of the file.
-        process_function (callable[[pd.DataFrame]) : None] ) : Default is  None.
-            A function to processs the data
-        **loader_args (any): Keyword arguments for the loader.
-
-    """
-    for filename in os.listdir(path):
-        _, ext = os.path.splitext(filename)
-        if ext == ".csv":
-            csv2pqt(path, filename, **loader_args)
+from TSbench.TSdata.TSloader import LoaderTSdf
 
 
 def merge_dataset(
-    loaders: list["LoaderTSdf"], merge_path: str, **merge_loader_args: any
-) -> "LoaderTSdf":
+    loaders: list[LoaderTSdf], merge_path: str, **merge_loader_args: Any
+) -> LoaderTSdf:
     """Merge dataset assuming no shared dataype.
 
     The merge path needs to be distinct from the path of all loaders.
@@ -82,7 +36,7 @@ def merge_dataset(
         ValueError: If `merge_path` is one of `loaders` path.
 
     """
-    if type(loaders) is not list:
+    if not isinstance(loaders, list):
         raise ValueError("Give a list of the loaders to merge")
 
     merge_loader = LoaderTSdf(

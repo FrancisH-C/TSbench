@@ -1,26 +1,26 @@
 """Model module defing BaseClass and subclasses."""
 
 from __future__ import annotations
-from abc import ABC, abstractmethod
-from typing import Union
 
-from TSbench.TSdata.TSloader import LoaderTSdf
-from TSbench.TSmodels.data import Data, size
-from TSbench.TSmodels.utils.corr_mat import Corr_mat
-from TSbench.TSmodels.point_process import Deterministic
+import json
+import math
+import os
+import pickle
+from abc import abstractmethod
+from typing import Optional, Type, TypeVar, Union
 
 import numpy as np
 import pandas as pd
-import math
-from numpy.random import Generator
-from randomgen import Xoshiro256
+from numpy.random import PCG64, Generator
 
-import os
-import pickle
-import json
+from TSbench.TSdata.TSloader import LoaderTSdf, TSloader
+
+from TSbench.TSdata.data import AnyData, Data, size
+from TSbench.TSmodels.point_process import Deterministic, PointProcess
+from TSbench.TSmodels.utils.corr_mat import Corr_mat
 
 
-class BaseModel(ABC):
+class BaseModel:
     """Abstract Base model class.
 
     For model generating outputs or forecasting timeseries.
@@ -34,21 +34,31 @@ class BaseModel(ABC):
         corr_mat (Corr_at, optional): A way to manipulate correlation
             matrices for the model. See Corr_mat for more info for how to
             se this parameter. Default is an identity correlation matrix.
-        mat (np.array, optional): A matrix to transform as Corr_mat.
+        mat (np.ndarray, optional): A matrix to transform as Corr_mat.
 
     """
 
+    loader: TSloader
+    name: str
+    dim: int
+    lag: int
+    rg: Generator
+    corr_mat: Corr_mat
+    point_process: PointProcess
+    dim_label: np.ndarray
+    feature_label: np.ndarray
+
     def __init__(
         self,
-        loader=None,
-        name=None,
+        loader: Optional[TSloader] = None,
+        name: Optional[str] = None,
         dim: int = 1,
-        lag: int = None,
-        rg: Generator = None,
-        corr_mat: Corr_mat = None,
-        point_process=None,
-        dim_label: list[str] = None,
-        feature_label: list[str] = None,
+        lag: int = 1,
+        rg: Optional[Generator] = None,
+        corr_mat: Optional[np.ndarray] = None,
+        point_process: Optional[PointProcess] = None,
+        dim_label: Optional[np.ndarray] = None,
+        feature_label: Optional[np.ndarray] = None,
     ) -> None:
         """Initialize BaseModel."""
         self.dim = dim
@@ -62,41 +72,37 @@ class BaseModel(ABC):
         self.set_corr_mat(corr_mat)
         self.set_feature_label(feature_label)
         self.set_dim_label(dim_label=dim_label)
-        self.set_point_process()
+        self.set_point_process(point_process)
 
-    def set_name(self, name=None):
+    def set_name(self, name: Optional[str] = None) -> None:
         self._name = name
 
-    def set_point_process(self, point_process=None):
+    def set_point_process(self, point_process: Optional[PointProcess] = None) -> None:
         if point_process is None:
             point_process = Deterministic()
         self.point_process = point_process
 
-    def set_random_generator(self, rg=None):
+    def set_random_generator(self, rg: Optional[Generator] = None) -> None:
         if rg is None:
-            rg = Generator(Xoshiro256())
+            rg = Generator(PCG64())
         self.rg = rg
 
-    def set_corr_mat(self, corr_mat=None):
-        if corr_mat is None:
-            self.corr_mat = Corr_mat(dim=self.dim, rg=self.rg, method="uncorrelated")
-        elif corr_mat is not None:
-            self.corr_mat = Corr_mat(mat=corr_mat, rg=self.rg)
-        else:
-            corr_mat.dim = self.dim
-            corr_mat.set_mat()
-            self.corr_mat = corr_mat
+    def set_corr_mat(self, mat: Optional[np.ndarray] = None) -> None:
+        if mat is None:
+            self.corr_mat = Corr_mat(dim=self.dim, rg=self.rg)
+        elif mat is not None:
+            self.corr_mat = Corr_mat(mat=mat, rg=self.rg)
 
-    def set_feature_label(self, feature_label=None):
+    def set_feature_label(self, feature_label: Optional[np.ndarray] = None) -> None:
         if feature_label is None:
-            feature_label = ["returns"]
+            feature_label = np.array(["returns"])
         if len(feature_label) != 1:
             raise ValueError("Need 'feature_label' with 1 entry")
         self.feature_label = feature_label
 
-    def set_dim_label(self, dim_label=None):
+    def set_dim_label(self, dim_label: Optional[np.ndarray] = None) -> None:
         if dim_label is None:
-            dim_label = list(map(str, np.arange(self.dim)))
+            dim_label = np.array(list(map(str, np.arange(self.dim))))
         elif len(dim_label) != self.dim:
             raise ValueError("Dimension mismatch between `dim_label` and `dim`")
 
@@ -104,7 +110,7 @@ class BaseModel(ABC):
 
     def __str__(self) -> str:
         """Model basic string info."""
-        if self._name == None:
+        if self._name is None:
             self._name = type(self).__name__.replace("_", "-")
         return self._name
 
@@ -113,27 +119,37 @@ class BaseModel(ABC):
         return str(self)
 
     def get_timestamp(
-        self, start=None, start_index=None, end=None, end_index=None, IDs=None
-    ):
+        self,
+        start: Optional[pd.Index] = None,
+        start_index: Optional[int] = None,
+        end: Optional[list[int] | pd.Index] = None,
+        end_index: Optional[int] = None,
+    ) -> pd.Index | np.ndarray:
         return self.loader.get_timestamp(
-            start=start, start_index=start_index, end=end, end_index=end_index, IDs=IDs
+            start=start,
+            start_index=start_index,
+            end=end,
+            end_index=end_index,
+            IDs=[str(self)],
         )
 
     def get_data(
         self,
-        tstype: type = pd.DataFrame,
-        start=None,
-        start_index=None,
-        end=None,
-        end_index=None,
-        timestamps=None,
-        dims=None,
-        features=None,
-    ):
+        tstype: Type[Data] = pd.DataFrame,
+        start: Optional[pd.Index] = None,
+        start_index: Optional[int] = None,
+        end: Optional[list[int] | pd.Index] = None,
+        end_index: Optional[int] = None,
+        timestamps: Optional[slice | np.ndarray | pd.Index] = None,
+        dims: Optional[list[str]] = None,
+        features: Optional[list[str]] = None,
+    ) -> Data:
         """Get the model's data.
 
-        For format LoaderTSdf return the time series
-        For format other than LoaderTSdf, returns only the observations of the time series.
+        For format LoaderTSdf return the time series For format other
+        than LoaderTSdf, returns only the observations of the time
+        series.
+
         """
         return self.loader.get_timeseries(
             IDs=[str(self)],
@@ -147,16 +163,17 @@ class BaseModel(ABC):
             tstype=tstype,
         )
 
-    def rm_data(self, timestamps):
-        self.loader.df.drop(index=timestamps, level="timestamp", inplace=True)
-
     def set_data(
-        self, data: Data = None, reset_timestamp=True, collision: str = "overwrite"
-    ):
+        self,
+        data: Optional[AnyData] = None,
+        reset_timestamp: bool = True,
+        collision: str = "overwrite",
+    ) -> AnyData:
         """Set model's data using loader.
 
-        For format LoaderTSdf set the timeseries.
-        For data of type other than LoaderTSdf, it assumes that data represents observations of the timeseries.
+        For format LoaderTSdf set the timeseries. For data of type
+        other than LoaderTSdf, it assumes that data represents
+        observations of the timeseries.
 
         """
         if data is None or size(data) == 0:
@@ -183,19 +200,21 @@ class BaseModel(ABC):
 
     def register_data(
         self,
-        loader=None,
-        ID=None,
-        append_to_feature=None,
-        feature_label=None,
+        loader: TSloader,
+        ID: Optional[str] = None,
+        append_to_feature: Optional[str] = None,
+        feature_label: Optional[np.ndarray] = None,
         collision="update",
-    ):
+    ) -> AnyData:
         """Record outputs from model to an external loader.
 
         Record data under given ID (used for data forecast).
         If None, it records under its own name (used for data generated)
 
-        model.data (list[np.array]): Every list entry (of type np.array) is a feature
-            with dimension T \times self.dim. The list is length is the length of the features.
+        model.data (list[np.ndarray]): Every list entry (of type
+            np.ndarray) is a feature with dimension T \times self.dim.
+            The list is length is the length of the features.
+
             i.e.
                     len(data) == len(feature).
                     [len(data[i]) == T for i in range(len(data))]
@@ -208,10 +227,12 @@ class BaseModel(ABC):
         if append_to_feature is None:
             feature_label = self.feature_label
         else:
-            feature_label = [
-                self.feature_label[i] + "_" + append_to_feature
-                for i in range(len(self.feature_label))
-            ]
+            feature_label = np.array(
+                [
+                    self.feature_label[i] + "_" + append_to_feature
+                    for i in range(len(self.feature_label))
+                ]
+            )
 
         if data.shape[1] != len(feature_label):
             raise ValueError("Need the same length of data as the lenght of feature .")
@@ -232,7 +253,7 @@ class BaseModel(ABC):
             filename (str): Name of pickle file where to save.
         """
 
-        def convert_to_json_serializable(model):
+        def convert_to_json_serializable(model: TSloader) -> dict:
             attributes = model.__dict__
             to_output = {}
             for att_name in attributes:
@@ -259,8 +280,10 @@ class BaseModel(ABC):
         else:
             raise ValueError("Unsupported extension type.")
 
+    SubModel = TypeVar("SubModel", bound="BaseModel")
+
     @classmethod
-    def load_model(model_class, filename: str) -> None:
+    def load_model(cls: Type[SubModel], filename: str) -> SubModel:
         """Load model.
 
         "pickle" is prefered to load the exact model.
@@ -270,12 +293,13 @@ class BaseModel(ABC):
         Args:
             filename (str): Name of pickle file where to save.
         """
+        SubModel = TypeVar("SubModel", bound="BaseModel")
 
         def model_from_parameters(
-            model_class, parameters: dict[str, Union[int, float, complex, list]]
-        ):
+            cls, parameters: dict[str, Union[int, float, complex, list]]
+        ) -> SubModel:
             "returns a new instance of the class"
-            new_instance = model_class.__new__(model_class)
+            new_instance = cls.__new__(cls)
             new_instance.__init__(**parameters)
             return new_instance
 
@@ -285,7 +309,7 @@ class BaseModel(ABC):
                 return pickle.load(f)
         elif ext == ".json":
             with open(filename, "r") as f:
-                return model_from_parameters(model_class, json.load(f))
+                return model_from_parameters(cls, json.load(f))
         else:
             raise ValueError("Unsupported extension type.")
 
@@ -311,15 +335,15 @@ class GeneratorModel(BaseModel):
 
     @abstractmethod
     def generate(
-        self, N: int, reset_timestamp=True, collision: str = "overwrite"
-    ) -> Model:
+        self, N: int, reset_timestamp: bool = True, collision: str = "overwrite"
+    ) -> AnyData:
         """Generate `T` values using Model.
 
         Args:
             T (int): Number of observations to generate.
 
         Returns:
-            np.array: data
+            np.ndarray: data
         """
         pass
 
@@ -340,11 +364,11 @@ class ForecastingModel(BaseModel):
         super().__init__(**model_args)
 
     @abstractmethod
-    def train(self) -> "Model":
+    def train(self) -> "BaseModel":
         """Train model using `state` as the trainning set.
 
         Args:
-            data (np.array): Input data.
+            data (np.ndarray): Input data.
 
         Returns:
             Model: Trained model.
@@ -356,41 +380,48 @@ class ForecastingModel(BaseModel):
     def forecast(
         self,
         T: int,
-        reset_timestamp=False,
+        reset_timestamp: bool = False,
         collision: str = "overwrite",
-    ) -> Data:
+    ) -> AnyData:
         """Forecast a timeseries.
 
         Knowing `series` from `start_index`, set self.timeseries to `T`
         forecast values.
 
         Args:
-            data (np.array): Input data.
+            data (np.ndarray): Input data.
             T (int): Number of forward forecast.
 
         Returns:
             dict[str, np.ndarray]: Possible {key :value} outputs
                 - {"returns" : .ndarray of returns}
-                - {"vol" : np.array of vol}.
+                - {"vol" : np.ndarray of vol}.
         """
         pass
 
     def rolling_forecast(
-        self, T: int, batch_size=1, window_size=0, train: bool = False, side="before"
-    ) -> Data:
+        self,
+        T: int,
+        batch_size: int = 1,
+        window_size: int = 0,
+        train: bool = False,
+        side: str = "before",
+    ) -> AnyData:
         """Rolling forecast a timeseries.
 
-        rounding (default = "before") : Control the behavior when T/batch_size != 0,
-            does it stop 'before' T (default) or 'after' T.
+        rounding (default = "before") : Control the behavior when
+            T/batch_size != 0, does it stop 'before' T (default) or
+            'after' T.
 
-        window_size (default = 0) : How much data to preserve. By default 0 to keep all data,
-            i.e. doing an expanding window forecast.
+        window_size (default = 0) : How much data to preserve. By
+            default 0 to keep all data, i.e. doing an expanding window
+            forecast.
+
         """
         # How to round forecast
         if side == "before":
             T = math.floor(T / batch_size) * batch_size
 
-        initial_timestamps = pd.DataFrame()
         # start at last forecast timestamp
         rolling_forecast = pd.DataFrame()
         for _ in range(0, T, batch_size):
@@ -420,11 +451,3 @@ class Model(GeneratorModel, ForecastingModel):
     def __init__(self, **model_args) -> None:
         """Initialize Model."""
         super().__init__(**model_args)
-
-    def generate_mode(self):
-        self.generate_mode = True
-        self.forecast_mode = False
-
-    def forecast_mode(self):
-        self.forecast_mode = True
-        self.generate_mode = False

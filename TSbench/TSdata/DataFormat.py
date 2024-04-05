@@ -1,13 +1,27 @@
-"""Example of data format to a TimeSeries DataFrame."""
+"""Data convertion between TimeSeries DataFrame and multiple common types."""
 
-import pandas as pd
+from typing import Any, Optional, Union
+
 import numpy as np
+import pandas as pd
+
+Data = Union[list, np.ndarray, pd.DataFrame]
 
 
-def convert_to_TSdf(data, ID=None, timestamp=None, dim_label=None, feature_label=None):
+def convert_to_TSdf(
+    data: Data,
+    ID: Optional[str] = None,
+    timestamp: Optional[list | np.ndarray | pd.Index] = None,
+    dim_label: Optional[list[str] | np.ndarray] = None,
+    feature_label: Optional[list[str] | np.ndarray] = None,
+) -> pd.DataFrame:
     if data is None or len(data) == 0:
-        return
-    elif type(data) is pd.DataFrame:
+        return pd.DataFrame(
+            index=pd.MultiIndex.from_arrays(
+                [[], [], []], names=("ID", "timestamp", "dim")
+            )
+        )
+    elif isinstance(data, pd.DataFrame):
         df = df_to_TSdf(
             data,
             ID=ID,
@@ -15,10 +29,10 @@ def convert_to_TSdf(data, ID=None, timestamp=None, dim_label=None, feature_label
             dim_label=dim_label,
             feature_label=feature_label,
         )
-    elif type(data) is list:
+    elif isinstance(data, list):
         # list of np.array
         if type(data[0]) is np.ndarray:
-            df = list_np_to_TSdff(
+            df = list_np_to_TSdf(
                 data,
                 ID=ID,
                 timestamp=timestamp,
@@ -26,7 +40,7 @@ def convert_to_TSdf(data, ID=None, timestamp=None, dim_label=None, feature_label
                 feature_label=feature_label,
             )
         #  list of list
-        elif type(data[0]) is list:
+        elif isinstance(data[0], list):
             df = np_to_TSdf(
                 np.array(data),
                 ID=ID,
@@ -42,7 +56,7 @@ def convert_to_TSdf(data, ID=None, timestamp=None, dim_label=None, feature_label
                 dim_label=dim_label,
                 feature_label=feature_label,
             )
-    elif type(data) is np.ndarray:
+    elif isinstance(data, np.ndarray):
         df = np_to_TSdf(
             data,
             ID=ID,
@@ -50,20 +64,25 @@ def convert_to_TSdf(data, ID=None, timestamp=None, dim_label=None, feature_label
             dim_label=dim_label,
             feature_label=feature_label,
         )
-    elif type(data) is dict:
+    elif isinstance(data, dict):
         df = dict_to_TSdf(
             data,
             ID=ID,
             timestamp=timestamp,
             dim_label=dim_label,
-            feature_label=feature_label,
         )
     else:
         raise ValueError("Data is of the wrong type to format")
     return df
 
 
-def df_to_TSdf(df, ID=None, timestamp=None, dim_label=None, feature_label=None):
+def df_to_TSdf(
+    df: pd.DataFrame,
+    ID: Optional[str] = None,
+    timestamp: Optional[list | np.ndarray | pd.Index] = None,
+    dim_label: Optional[list[str] | np.ndarray] = None,
+    feature_label: Optional[list[str] | np.ndarray] = None,
+) -> pd.DataFrame:
     """Convert a pandas DataFrame into a TimeSeries DataFrame.
 
     By default, keeps data in the columns of the DataFrame.
@@ -78,7 +97,7 @@ def df_to_TSdf(df, ID=None, timestamp=None, dim_label=None, feature_label=None):
         df = df.drop(columns=["index"])
 
     if "dim" in df.columns:
-        dim_label = set(df["dim"])
+        dim_label = list(set(df["dim"]))
     else:
         if dim_label is None:
             dim_label = ["0"]
@@ -121,10 +140,14 @@ def df_to_TSdf(df, ID=None, timestamp=None, dim_label=None, feature_label=None):
     return df
 
 
-def list_np_to_TSdff(
-    arr_list, df=None, ID=None, timestamp=None, dim_label=None, feature_label=None
-):
-
+def list_np_to_TSdf(
+    arr_list: list[np.ndarray],
+    df: Optional[pd.DataFrame] = None,
+    ID: Optional[str] = None,
+    timestamp: Optional[list | np.ndarray | pd.Index] = None,
+    dim_label: Optional[list[str] | np.ndarray] = None,
+    feature_label: Optional[list[str] | np.ndarray] = None,
+) -> pd.DataFrame:
     # ID
     if ID is None:
         raise ValueError("Need an ID.")
@@ -140,7 +163,7 @@ def list_np_to_TSdff(
         if arr_list[0].ndim < 2:
             dim_label = ["0"]
         else:
-            dim_label = [i for i in range(arr_list[0].shape[1])]
+            dim_label = [str(i) for i in range(arr_list[0].shape[1])]
 
     # default feature_label
     if feature_label is None:
@@ -168,7 +191,7 @@ def list_np_to_TSdff(
     feature_counter = 0
     for arr in arr_list:
         if arr.ndim < 3:
-            current_features = feature_label[feature_counter]
+            current_features = [feature_label[feature_counter]]
             feature_counter += 1
         else:
             current_features = feature_label[feature_counter : arr.shape[2] + 1]
@@ -187,8 +210,13 @@ def list_np_to_TSdff(
 
 
 def np_to_TSdf(
-    arr, df=None, ID=None, timestamp=None, dim_label=None, feature_label=None
-):
+    arr: np.ndarray,
+    df: Optional[pd.DataFrame] = None,
+    ID: Optional[str] = None,
+    timestamp: Optional[list | np.ndarray | pd.Index] = None,
+    dim_label: Optional[list[str] | np.ndarray] = None,
+    feature_label: Optional[list[str] | np.ndarray] = None,
+) -> pd.DataFrame:
     # ID
     if ID is None:
         raise ValueError("Need an ID.")
@@ -204,7 +232,7 @@ def np_to_TSdf(
         if arr.ndim < 2:
             dim_label = ["0"]
         else:
-            dim_label = [i for i in range(arr.shape[1])]
+            dim_label = [str(i) for i in range(arr.shape[1])]
 
     if feature_label is None:
         if arr.ndim < 3:
@@ -238,12 +266,17 @@ def np_to_TSdf(
     return df
 
 
-def dict_to_TSdf(data, ID=None, timestamp=None, dim_label=None):
+def dict_to_TSdf(
+    dict_to_convert: dict[str, Any],
+    ID: Optional[str] = None,
+    timestamp: Optional[list | np.ndarray | pd.Index] = None,
+    dim_label: Optional[list[str] | np.ndarray] = None,
+) -> pd.DataFrame:
     """Convert a dict to pandas DataFrame."""
     df = pd.DataFrame()
-    for feature in data:
+    for feature in dict_to_convert:
         df = np_to_TSdf(
-            data[feature],
+            dict_to_convert[feature],
             df,
             ID=ID,
             timestamp=timestamp,

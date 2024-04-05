@@ -1,9 +1,10 @@
 """Correlation matrix wrapper for numpy array."""
 
 from __future__ import annotations
+
 import numpy as np
-from numpy.random import Generator
-from randomgen import Xoshiro256
+from numpy.random import PCG64, Generator
+from typing import Optional, Callable
 
 
 class Corr_mat:
@@ -19,14 +20,20 @@ class Corr_mat:
 
     """
 
+    mat: np.ndarray
+    rg: Generator
+    dim: int
+    method: Callable[..., np.ndarray]
+    method_args: dict
+
     def __init__(
         self,
-        mat: np.ndarray = None,
-        rg: Generator = None,
-        dim: int = None,
-        method: str = "random",
-        **method_const,
-    ):
+        mat: Optional[np.ndarray] = None,
+        rg: Optional[Generator] = None,
+        dim: Optional[int] = None,
+        method: Optional[Callable[..., np.ndarray]] = None,
+        **method_args,
+    ) -> None:
         """Initialize the correlation matrix.
 
         With either a given matrix `mat` or with with a `method` to generate a `dim`
@@ -47,55 +54,50 @@ class Corr_mat:
 
         """
         # initialize
-        if mat is not None:
+        if mat is not None and dim is None:
             dim = np.size(mat, 0)
+        elif mat is None and dim is not None:
+            self.dim = dim
+        else:
+            raise ValueError("Give exactly one of {`dim`, `mat`} parameters.")
 
         if rg is None:
-            rg = Generator(Xoshiro256())
+            rg = Generator(PCG64())
         self.rg = rg
 
-        self.dim = dim
-        self.mat = mat
-
         self.make_corr_mat = self.normalize_correlation_matrix
-        self.method = self.uniform_correlation
+        self.set_method(method)
 
-        # If needed and you can use `method` to generate the correlation matrix
-        if self.mat is None and self.dim is not None:
-            self.mat = self.set_mat()
+        self.set_mat(**method_args)
 
-        # If user define, make sure it is a correlation matrices
-        # if not mat is None and not self.is_corr_mat():
-        #    self.make_corr_mat = self.normalize_correlation_matrix
-
-    def set_dim(self, dim: int) -> np.ndarray:
+    def set_dim(self, dim: int) -> None:
         """Set dimension for correlation matrix.
 
         Args:
             dim (int): new dimension to set.
         """
         self.dim = dim
-        return self.mat
 
-    def set_method(self, method, **method_const):
-        """Set method to generate new correlation matrix.
+    def set_method(
+        self, method: Optional[Callable[..., np.ndarray]] = None, **method_args
+    ) -> None:
+        """A method takes **method_args and returns a well-define correlation matrix.
 
         Args:
             method (int): new method to use.
         """
-        self.method = lambda **method_var: getattr(self, method)(
-            **method_const, **method_var
-        )
-        return self.method
+        if method is None:
+            method = self.distribution_method
+        self.method = method
+        self.method_args = method_args
 
-    def set_mat(self, **method_var):
+    def set_mat(self) -> None:
         """Set new correlation matrix using `self.mat`.
 
         Args:
             **kwargs: keyword arguments used in `self.method`.
         """
-        self.mat = self.method(**method_var)
-        return self.mat
+        self.mat = self.method(**self.method_args)
 
     def is_corr_mat(self) -> bool:
         """Test on matrix a correlation matrix.
@@ -144,46 +146,33 @@ class Corr_mat:
         self.mat = np.eye(self.dim)
         return self.mat
 
-    def mat_from_distribution(self, distribution) -> np.ndarray:
-        """Generate a correlation matrix from a distribution function."""
-        mat = np.eye(self.dim)
-        for i in range(np.size(mat, 0)):
-            for j in range(np.size(mat, 1)):
-                mat[i, j] = distribution()
+    def distribution_method(
+        self, distribution_name: Optional[str] = None, **distribution_args
+    ):
+        if distribution_name is None:
+            distribution_name = "uniform"
+        if not distribution_args:
+            distribution_args = {"low": -1, "high": 1}
+        distribution = getattr(self.rg, distribution_name)
 
-        for i in range(np.size(mat, 0)):
-            mat[i, i] = 1
-        self.mat = mat
-        return mat
+        def mat_from_distribution(
+            distribution: Callable[..., float], **distribution_args
+        ) -> np.ndarray:
+            """Generate a correlation matrix from a distribution function."""
+            mat = np.eye(self.dim)
+            for i in range(np.size(mat, 0)):
+                for j in range(np.size(mat, 1)):
+                    mat[i, j] = distribution(**distribution_args)
 
-    def uniform_correlation(self, bias: str = "neutral") -> np.ndarray:
-        """Generate a correlation matrix.
+            for i in range(np.size(mat, 0)):
+                mat[i, i] = 1
+            self.mat = mat
+            self.make_corr_mat()
+            return self.mat
 
-        Using Uniform distribution for off-diagonal inputs.
+        return mat_from_distribution(distribution, **distribution_args)
 
-        Args:
-            bias (str, optional): Possible value : {"neutral" , "positive" , "negative"}
-                - 'Neutral' is uncorrelated
-                - 'Positive' is positively correlated
-                - 'Negative' is negatively correlated.
-                Default is neutral.
-
-        Returns:
-            np.ndarray: A random correlation matrix
-
-        """
-        if bias == "positive":
-            self.mat = self.mat_from_distribution(lambda: self.rg.uniform(0, 1))
-        elif bias == "neutral":
-            self.mat = self.mat_from_distribution(lambda: self.rg.uniform(-1, 1))
-        elif bias == "negative":
-            self.mat = self.mat_from_distribution(lambda: self.rg.uniform(-1, 0))
-        else:
-            raise ValueError('`corr` is either "neutral", "positive" or "negative"')
-
-        return self.mat
-
-    def const(self, corr: int = 0.5) -> np.ndarray:
+    def const_method(self, corr: float = 0.5) -> np.ndarray:
         """Generate a correlation matrix with all entries being a constant.
 
         Args:
@@ -198,7 +187,7 @@ class Corr_mat:
         self.make_corr_mat()
         return self.mat
 
-    def specific_corr(self, indices: list[tuple], corr: list[int]) -> np.ndarray:
+    def specific_corr_method(self, indices: list[tuple], corr: list[int]) -> np.ndarray:
         """Set the matrix at `corr` for `indices`.
 
         Args:

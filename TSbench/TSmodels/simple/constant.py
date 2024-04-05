@@ -1,15 +1,18 @@
 """Constant model."""
 
 from __future__ import annotations
+
 import numpy as np
+
+from TSbench.TSdata.data import AnyData
 from TSbench.TSmodels.models import Model
-from TSbench.TSmodels.data import Data
+from typing import Optional
 
 
 class Constant(Model):
     """A simple constant model."""
 
-    def __init__(self, constant: np.ndarray = None, **model_args) -> None:
+    def __init__(self, constant: Optional[np.ndarray] = None, **model_args) -> None:
         """Initialize Constant."""
         super().__init__(**model_args)
         if constant is None:
@@ -17,8 +20,8 @@ class Constant(Model):
         self.constant = constant
 
     def generate(
-        self, N: int, reset_timestamp=True, collision: str = "overwrite"
-    ) -> Data:
+        self, N: int, reset_timestamp: bool = True, collision: str = "overwrite"
+    ) -> AnyData:
         """Generate `T` values using Constant.
 
         Args:
@@ -50,9 +53,9 @@ class Constant(Model):
     def forecast(
         self,
         T: int,
-        reset_timestamp=False,
+        reset_timestamp: bool = False,
         collision: str = "overwrite",
-    ) -> Data:
+    ) -> AnyData:
         """Forecast a data.
 
         Knowing `data` forecast `T` values.

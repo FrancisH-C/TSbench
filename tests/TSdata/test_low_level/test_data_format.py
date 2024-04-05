@@ -4,7 +4,7 @@ import pandas as pd
 from TSbench.TSdata.TSloader import LoaderTSdf, convert_from_TSdf
 from TSbench.TSdata.DataFormat import (
     np_to_TSdf,
-    list_np_to_TSdff,
+    list_np_to_TSdf,
     dict_to_TSdf,
     df_to_TSdf,
 )
@@ -31,7 +31,9 @@ def test_simple_types_data_format():
     ### Value from np.ndarray
     arr_feature0 = np.arange(10)
     TSdf2 = np_to_TSdf(arr_feature0, ID=ID, timestamp=timestamp)
-    loader.add_data(TSdf2, ID=ID, collision="overwrite", feature_label=["feature0"])
+    loader.add_data(
+        TSdf2, ID=ID, collision="overwrite", feature_label=np.array(["feature0"])
+    )
 
     ### Value from a dictionary of multiple features
     arr_feature1 = np.arange(10)
@@ -42,7 +44,7 @@ def test_simple_types_data_format():
     ### Value from list of np.ndarray
     arr_feature = np.zeros((10, 3))
     mat_feature = np.ones((10, 3, 3))
-    TSdf4 = list_np_to_TSdff(
+    TSdf4 = list_np_to_TSdf(
         [arr_feature, mat_feature],
         ID=ID,
         timestamp=timestamp,

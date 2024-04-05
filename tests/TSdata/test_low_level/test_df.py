@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from TSbench.TSdata import LoaderTSdf
+from TSbench.TSdata.TSloader import LoaderTSdf
 
 
 def test_low_level():
@@ -24,7 +24,6 @@ def test_low_level():
     loader.df = pd.DataFrame()
     ID = "added_ID"
     loader.add_data(df_ID, ID=ID, collision="overwrite")
-    loader.df  # in memory
 
     ### add feature
     ID = "added_ID"

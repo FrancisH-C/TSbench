@@ -31,12 +31,11 @@ def simple_loader():
     return loader
 
 
-IDs = ["name1", "added_ID"]
-timestamps = ["0", "1", "5"]
-dims = ["0"]
-
-
 def test_get_df():
+    IDs = ["name1", "added_ID"]
+    timestamps = np.array(["0", "1", "5"])
+    dims = ["0"]
+
     loader = simple_loader()
     loader.get_df()
     loader.get_df(IDs=IDs)

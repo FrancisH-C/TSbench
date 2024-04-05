@@ -1,9 +1,8 @@
-from joblib.parallel import VALID_BACKEND_CONSTRAINTS
-import pandas as pd
 import numpy as np
-import os, shutil
-from TSbench.TSdata import LoaderTSdf, DataFormat, DatasetOperations, LoaderTSdfCSV
+import pandas as pd
 import pytest
+
+from TSbench.TSdata import DatasetOperations, LoaderTSdf, LoaderTSdfCSV
 
 
 def same_data(df1, df2, debug=False):
@@ -26,12 +25,6 @@ def same_data(df1, df2, debug=False):
         for feature in df1.columns:
             x = df1.loc[index][feature]
             y = df2.loc[index][feature]
-
-            # if type(x) is pd.Series:
-            #    x = x.values
-            # if type(y) is pd.Series:
-            #    y = y.values
-
             if x != y:
                 if debug:
                     print("Not equal")
@@ -72,7 +65,7 @@ def simple_loader():
 
 
 def test_loaderCSV():
-    """Simple CSV loader for test."""
+    """Simple CSV loader."""
     path = "data/test_CSV"
     datatype = "simulated"
     permission = "overwrite"
@@ -100,10 +93,6 @@ def test_loaderCSV():
     loader.load()
 
 
-# def test_loaderCSV():
-#     raise ValueError("To implement")
-
-
 def test_permission():
     testpath = "data/test_nonexistent"
     loader = simple_loader()
@@ -127,14 +116,14 @@ def test_permission():
     loader.set_permission("write")
     ID = "added_ID"
     feature = "feature0"
-    df = pd.DataFrame(columns=["ID", "timestamp", feature])
+    df = pd.DataFrame(index=pd.Index(["ID", "timestamp"]), columns=pd.Index([feature]))
 
     with pytest.raises(ValueError):
         loader.rm_ID(ID)
     with pytest.raises(ValueError):
         loader.rm_feature(feature)
     with pytest.raises(ValueError):
-        loader.set_df(pd.DataFrame(columns=["ID", "timestamp"]))
+        loader.set_df(pd.DataFrame(index=pd.Index(["ID", "timestamp"])))
 
     with pytest.raises(ValueError):
         loader.add_data(df.copy(), ID=ID, collision="overwrite")
@@ -166,9 +155,7 @@ def test_add_data():
     loader = simple_loader()
     solution_df = loader.df.copy()
 
-    ##########
-    # add_data #
-    ##########
+    # add_data
     ID = "added_ID"
     feature = "added_feature"
 
@@ -215,9 +202,7 @@ def test_add_data():
     loader.add_data(df2.copy(), ID=ID, collision="update")
     assert same_data(loader.df, solution_df)
 
-    ###############
-    # add_feature #
-    ###############
+    # add_feature
     d_feature = {"timestamp": list(map(str, range(4))), feature: list(range(15, 19))}
     d_feature_other = {
         "timestamp": list(map(str, range(4))),
@@ -258,18 +243,18 @@ def test_metadata_operations():
 
     # add
     # list or no list input
-    loader.append_to_metadata(test_metadata=1)
+    loader.append_to_metadata(test_metadata=[1])
     assert loader.metadata["test_metadata"].iloc[0] == [1]
     loader.append_to_metadata(test_metadata=[1])
     assert loader.metadata["test_metadata"].iloc[0] == [1]
     # different value add
-    loader.append_to_metadata(test_metadata=2)
+    loader.append_to_metadata(test_metadata=[2])
     loader.append_to_metadata(test_metadata=[3])
     assert (loader.metadata["test_metadata"].iloc[0] == [1, 2, 3]).all()
 
     # overwrite
     # list or no list input
-    loader.set_metadata(test_metadata=1)
+    loader.set_metadata(test_metadata=[1])
     assert loader.metadata["test_metadata"].iloc[0] == [1]
     loader.set_metadata(test_metadata=[1])
     assert loader.metadata["test_metadata"].iloc[0] == [1]

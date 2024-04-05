@@ -24,7 +24,7 @@ def test_data_to_reprodue():
     timeseries = loader.get_timeseries(IDs=ID, end_index=4, features=feature_label)
     cnst_model.set_data(data=timeseries)
 
-    timeseries = loader.get_timeseries(IDs=ID, end=3, features=feature_label)
+    timeseries = loader.get_timeseries(IDs=ID, end=[3], features=feature_label)
     cnst_model.set_data(data=timeseries)
     T = 5
     cnst_model.forecast(T)
@@ -50,12 +50,9 @@ def test_model_generate():
     for dim in range(1, 10):
         seed = 1234
         N = 10
-        T = 5
         feature_label = ["feature"]
         rg = Generator(PCG64(seed))
         # loader
-        path = "data/"
-        datatype = "simulated"
         # Simple model
         cnst_model = TSmodels.Constant(dim=dim, rg=rg, feature_label=feature_label)
         # generate 1
@@ -113,7 +110,7 @@ def test_model_forecast_indexing():
 
     # Test Forecast
     # forecast IS
-    timeseries = loader.get_timeseries(IDs=[ID], end=3, features=["feature"])
+    timeseries = loader.get_timeseries(IDs=[ID], end=[3], features=["feature"])
     cnst_model.set_data(timeseries)
     cnst_model.forecast(T, reset_timestamp=False, collision="overwrite")
     cnst_model.register_data(loader, append_to_feature=str(cnst_model))
@@ -128,7 +125,7 @@ def test_model_forecast_indexing():
     # Test rolling forecast
     loader.rm_feature("feature_Constant")
     ## rolling forecast IS
-    timeseries = loader.get_timeseries(IDs=[ID], end=3, features=["feature"])
+    timeseries = loader.get_timeseries(IDs=[ID], end=[3], features=["feature"])
     cnst_model.set_data(timeseries)
     cnst_model.rolling_forecast(T)
     cnst_model.register_data(loader, append_to_feature=str(cnst_model))
@@ -196,7 +193,7 @@ def test_model_forecast():
 
         # Test Forecast
         # forecast IS
-        timeseries = loader.get_timeseries(IDs=[ID], end=3, features=["feature"])
+        timeseries = loader.get_timeseries(IDs=[ID], end=[3], features=["feature"])
         cnst_model.set_data(timeseries)
         cnst_model.forecast(T, reset_timestamp=False, collision="overwrite")
         cnst_model.register_data(loader, append_to_feature=str(cnst_model))
@@ -209,7 +206,7 @@ def test_model_forecast():
         # Test rolling forecast
         loader.rm_feature("feature_Constant")
         ## rolling forecast IS
-        timeseries = loader.get_timeseries(IDs=[ID], end=3, features=["feature"])
+        timeseries = loader.get_timeseries(IDs=[ID], end=[3], features=["feature"])
         cnst_model.set_data(timeseries)
         cnst_model.rolling_forecast(T)
         cnst_model.register_data(loader, append_to_feature=str(cnst_model))
@@ -256,14 +253,9 @@ def test_model_forecast():
 
 def test_parametersIO():
     seed = 1234
-    N = 10
-    T = 5
     feature_label = ["feature"]
     rg = Generator(PCG64(seed))
     # loader
-    path = "data/"
-    datatype = "simulated"
-    loader = LoaderTSdf(path=path, datatype=datatype)
     # Simple model
     cnst_model = TSmodels.Constant(lag=1, dim=1, rg=rg, feature_label=feature_label)
     # save model
@@ -281,8 +273,6 @@ def test_parametersIO():
 
 @pytest.mark.arma
 def test_arma():
-    ar = [0.5, 0.33]
-    ma = [0.5, 0.6]
     seed = 1234
     N = 60
     T = 10
@@ -309,34 +299,40 @@ def test_GARCH():
 
 
 def test_MGARCH():
-    # VEC_GARCH
-    # Need to be careful since VEC_GARCH is not well defnied for negative definite matrix.
+    """MGARCH test.
+
+    Need to be careful since VEC_GARCH is not well defnied for
+    negative definite matrix.
+    """
+    # VEC_GARCH, dim=2
     seed = 9103
     lag = 3
     N = 10
     dim = 2
     rg = Generator(PCG64(seed))
     vec_garch = TSmodels.VEC_GARCH(dim=dim, lag=lag, rg=rg)
-
     timeseries = vec_garch.generate(N=N)
     vec_garch.set_data(data=timeseries)
     vec_garch.generate(N=N)
-    # SPC_VEC_GARCH
-    for dim in range(3, 4):
-        spd_vec_garch = TSmodels.SPD_VEC_GARCH(dim=dim, lag=lag, rg=rg)
 
-        timeseries = spd_vec_garch.generate(N=N)
-        spd_vec_garch.set_data(data=timeseries)
-        spd_vec_garch.generate(N=N)
+    # VEC_SPD_GARCH
+    for dim in range(3, 5):
+        vec_spd_garch = TSmodels.VEC_SPD_GARCH(dim=dim, lag=lag, rg=rg)
+
+        timeseries = vec_spd_garch.generate(N=N)
+        vec_spd_garch.set_data(data=timeseries)
+        vec_spd_garch.generate(N=N)
 
 
 @pytest.mark.R
 def test_Rgarch():
     """Using R packages"""
-    lag = 3
+    lag = 2
     N = 10
+    T = 10
     rg = Generator(PCG64(1234))
-    garch_model = TSmodels.rGARCH(lag=lag, rg=rg)
+    garch_model = TSmodels.GARCH(lag=lag, rg=rg)
     timeseries = garch_model.generate(N=N)
-    garch_model.set_data(data=timeseries)
-    timeseries = garch_model.generate(N=N)
+    rgarch_model = TSmodels.rGARCH(lag=lag, rg=rg)
+    rgarch_model.set_data(data=timeseries)
+    timeseries = rgarch_model.forecast(T=T)

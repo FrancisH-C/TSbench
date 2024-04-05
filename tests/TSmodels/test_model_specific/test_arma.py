@@ -13,18 +13,17 @@
 #
 # arma.rg
 #
-# from randomgen import Generator, Xoshiro256
+# from randomgen import Generator
 #
-# rg = [Generator(Xoshiro256(1234)) for _ in range(10)]
-# # Advance each Xoshiro256 instance by i jumps
+# rg = [Generator() for _ in range(10)]
+# # Advance each instance by i jumps
 # for i in range(10):
 #     rg[i].bit_generator.jump(i)
 #
 # from TSbench.utils.corr_mat import Corr_mat
 # from numpy.random import Generator
-# from randomgen import Xoshiro256
 #
-# rg = Generator(Xoshiro256(1234))
+# rg = Generator()
 # rg.exponential(scale=0.1, size=1)
 #
 # x = Corr_mat(dim=2)
@@ -35,7 +34,6 @@
 # import numpy as np
 #
 # from numpy.random import Generator, PCG64, MT19937, default_rng
-# from randomgen import Xoshiro256
 #
 # from TSbench import models
 #

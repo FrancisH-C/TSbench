@@ -15,7 +15,7 @@ def test_multivariate():
 
     ID1 = "ABC"
     ID2 = "XYZ"
-    dim_label = ["0", "1"]
+    dim_label = np.array(["0", "1"])
     returns = np.array([[0, 1], [2, 3], [4, 5]])
     vol = np.array([[[0, 1], [2, 3]], [[4, 5], [6, 7]], [[8, 9], [10, 11]]])
 

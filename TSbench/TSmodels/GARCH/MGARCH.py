@@ -1,12 +1,15 @@
 from __future__ import annotations
+
+from typing import Callable
+
 import numpy as np
 from numpy import random as rand
 from numpy.linalg import cholesky
 
-from TSbench.TSmodels.models import GeneratorModel
 from TSbench.TSmodels.GARCH import GARCH
-
-from typing import Callable
+from TSbench.TSmodels.models import GeneratorModel
+from TSbench.TSdata.data import AnyData
+from typing import Optional
 
 
 class VEC_GARCH(GARCH):
@@ -22,17 +25,17 @@ class VEC_GARCH(GARCH):
         super().__init__(**garch_args)
 
     def generate(
-        self, N: int, reset_timestamp=False, collision: str = "overwrite"
-    ) -> Data:
+        self, N: int, reset_timestamp: bool = True, collision: str = "overwrite"
+    ) -> AnyData:
         """Generate `N` values using VEC-GARCH.
 
         Args:
             N (int): Number of observations to generate.
 
         Returns:
-            dict[str, np.array] : {key :value} outputs
-                - {"returns"  : np.array of returns}
-                - {"vol"  : np.array of vol}.
+            dict[str, np.ndarray] : {key :value} outputs
+                - {"returns"  : np.ndarray of returns}
+                - {"vol"  : np.ndarray of vol}.
         """
         # initialization
         epsilon = np.zeros((N, self.dim))
@@ -49,19 +52,21 @@ class VEC_GARCH(GARCH):
             vol[t, :, :] = cholesky(vol[t, :, :])
             epsilon[t, :] = np.dot(vol[t, :, :], z[t, :])
 
-        return self.set_data(data=[epsilon, vol], collision=collision)
+        return self.set_data(
+            data=[epsilon, vol], reset_timestamp=reset_timestamp, collision=collision
+        )
 
-    def generate_ar(self, vol: np.array, t: int) -> np.array:
+    def generate_ar(self, vol: np.ndarray, t: int) -> np.ndarray:
         """Generate the VEC-GARCH autoregressive process.
 
         Use up until `self.p`.
 
         Args:
-            vol (np.array): Array of lagged vol dimension-wise.
-            t (np.array): The current time.
+            vol (np.ndarray): Array of lagged vol dimension-wise.
+            t (np.ndarray): The current time.
 
         Returns:
-            np.array : Generated autoregressive process.
+            np.ndarray : Generated autoregressive process.
 
         """
         y = np.zeros((self.dim, self.dim))
@@ -69,17 +74,17 @@ class VEC_GARCH(GARCH):
             y += np.matmul(self.B[j, :, :], vol[t - j - 1, :, :])
         return y
 
-    def generate_ma(self, epsilon: np.array, t: int) -> np.array:
+    def generate_ma(self, epsilon: np.ndarray, t: int) -> np.ndarray:
         """Generate the VEC-GARCH moving average process.
 
         Use up until `self.q`.
 
         Args:
-            epsilon (np.array): Array of lagged returns dimension-wise.
-            t (np.array): The current time.
+            epsilon (np.ndarray): Array of lagged returns dimension-wise.
+            t (np.ndarray): The current time.
 
         Returns:
-            np.array : Generated moving average process.
+            np.ndarray : Generated moving average process.
 
         """
         y = np.zeros((self.dim, self.dim))
@@ -90,7 +95,7 @@ class VEC_GARCH(GARCH):
         return y
 
 
-class SPD_VEC_GARCH(VEC_GARCH):
+class VEC_SPD_GARCH(VEC_GARCH):
     """Generate outputs using the SPD-VEC-GARCH models within a simulation.
 
     Args:
@@ -100,21 +105,25 @@ class SPD_VEC_GARCH(VEC_GARCH):
     """
 
     def __init__(self, **garch_args) -> None:
-        """Initialize SPC_VEC_GARCH."""
+        """Initialize VEC_SPC_GARCH."""
         super().__init__(**garch_args)
 
     def generate(
-        self, N: int, reset_timestamp=False, collision: str = "overwrite", verbose=False
-    ) -> Data:
-        """Generate `T` values using SPD-VEC-GARCH.
+        self,
+        N: int,
+        reset_timestamp: bool = True,
+        collision: str = "overwrite",
+        verbose: bool = False,
+    ) -> AnyData:
+        """Generate `N` values using VEC-SPD-GARCH.
 
         Args:
-            T (int): Number of observations to generate.
+            N (int): Number of observations to generate.
 
         Returns:
-            dict[str, np.array] : {key :value} outputs :
-                - {"returns"  : np.array of returns}
-                - {"vol"  : np.array of vol}
+            dict[str, np.ndarray] : {key :value} outputs :
+                - {"returns"  : np.ndarray of returns}
+                - {"vol"  : np.ndarray of vol}
         """
         # initialization
         epsilon = np.zeros((N, self.dim))
@@ -151,19 +160,21 @@ class SPD_VEC_GARCH(VEC_GARCH):
                 translations,
             )
 
-        return self.set_data(data=[epsilon, vol], collision=collision)
+        return self.set_data(
+            data=[epsilon, vol], reset_timestamp=reset_timestamp, collision=collision
+        )
 
-    def generate_ar(self, vol: np.array, t: int) -> np.array:
+    def generate_ar(self, vol: np.ndarray, t: int) -> np.ndarray:
         """Generate the VEC-GARCH autoregressive process.
 
         Use up until `self.p`.
 
         Args:
-            vol (np.array): Array of lagged vol dimension-wise.
-            t (np.array): The current time.
+            vol (np.ndarray): Array of lagged vol dimension-wise.
+            t (np.ndarray): The current time.
 
         Returns:
-            np.array : Generated autoregressive process.
+            np.ndarray : Generated autoregressive process.
 
         """
         y = np.zeros((self.dim, self.dim))
@@ -171,17 +182,17 @@ class SPD_VEC_GARCH(VEC_GARCH):
             y += np.matmul(self.B[j, :, :], vol[t - j - 1, :, :])
         return y
 
-    def generate_ma(self, epsilon: np.array, t: int) -> np.array:
-        """Generate the SPD-VEC-GARCH moving average process.
+    def generate_ma(self, epsilon: np.ndarray, t: int) -> np.ndarray:
+        """Generate the VEC-SPD-GARCH moving average process.
 
         Use up until `self.q`.
 
         Args:
-            epsilon (np.array): Array of lagged returns dimension-wise.
-            t (np.array): The current time.
+            epsilon (np.ndarray): Array of lagged returns dimension-wise.
+            t (np.ndarray): The current time.
 
         Returns:
-            np.array : Generated moving average process.
+            np.ndarray : Generated moving average process.
 
         """
         y = np.zeros((self.dim, self.dim))
@@ -207,16 +218,16 @@ class DCC_GARCH(GeneratorModel):
         univariate (list[GARCH], optional): List of `self.dim` GARCH-type model used to
              generate the univariate variance. Default is to have a list of
             `self.dim` `GARCH` model.
-        R (np.array, optional): A correlation matrix. Default is the identity matrix.
+        R (np.ndarray, optional): A correlation matrix. Default is the identity matrix.
         **model_args: Arguments for `Model`. Possible keywords are `dim`, `lag`
             and `corr`.
     """
 
     def __init__(
         self,
-        update_rule: Callable[..., int] = None,
-        univariate: list[GARCH] = None,
-        R: np.array = None,
+        update_rule: Optional[Callable[..., int]] = None,
+        univariate: Optional[list[GARCH]] = None,
+        R: Optional[np.ndarray] = None,
         theta1: float = 0.05,
         theta2: float = 0.05,
         **model_args,
@@ -242,32 +253,34 @@ class DCC_GARCH(GeneratorModel):
         else:
             self.update_rule = update_rule
 
-    def generate(self, T: int) -> dict[str, np.array]:
-        """Generate `T` values using DCC-GARCH.
+    def generate(
+        self, N: int, reset_timestamp: bool = True, collision: str = "overwrite"
+    ) -> AnyData:
+        """Generate `N` values using DCC-GARCH.
 
         Args:
-            T (int): Number of observations to generate.
+            N (int): Number of observations to generate.
 
         Returns:
-            dict[str, np.array]: {key :value} outputs
-                - {"returns"  : np.array of returns}
-                - {"vol"  : np.array of vol}.
+            dict[str, np.ndarray]: {key :value} outputs
+                - {"returns"  : np.ndarray of returns}
+                - {"vol"  : np.ndarray of vol}.
         """
         # initialization
-        epsilon = np.zeros((self.dim, T))
-        vol = np.zeros((T, self.dim, self.dim))
-        z = rand.standard_normal(size=(self.dim, T))
+        epsilon = np.zeros((self.dim, N))
+        vol = np.zeros((N, self.dim, self.dim))
+        z = rand.standard_normal(size=(self.dim, N))
 
         # generate univariate
         for i in range(0, len(self.univariate)):
-            outputs = self.univariate[i].generate(T)
+            vol[:, i, i] = self.univariate[i].generate(N)
             # x, vol[:, i, i] = outputs["returns"], outputs["vol"]
             # x = outputs["returns"]
-            vol[:, i, i] = outputs["vol"].reshape(T)  # from (T, 1)
+            # vol[:, i, i] = outputs["vol"].reshape(N)  # from (T, 1)
 
         # compose
         R0 = self.R
-        for t in range(2, T):
+        for t in range(2, N):
             vol[t, :, :] = np.matmul(vol[t, :, :], np.matmul(self.R, vol[t, :, :]))
             self.update_rule(z=z, R0=R0, t=t, theta1=self.theta1, theta2=self.theta2)
 
@@ -275,8 +288,9 @@ class DCC_GARCH(GeneratorModel):
 
             epsilon[:, t] = np.matmul(vol[t, :, :], z[:, t])
 
-        self.outputs = {"returns": np.transpose(epsilon), "vol": vol}
-        return self.outputs
+        return self.set_data(
+            data=[epsilon, vol], reset_timestamp=reset_timestamp, collision=collision
+        )
 
     def __repr__(self) -> str:
         """GARCH info by dimension."""
@@ -289,8 +303,8 @@ class DCC_GARCH(GeneratorModel):
 
     def DCCE(
         self,
-        z: np.array,
-        R0: np.array,
+        z: np.ndarray,
+        R0: np.ndarray,
         t: int,
         theta1: float = 0.05,
         theta2: float = 0.05,
@@ -298,9 +312,9 @@ class DCC_GARCH(GeneratorModel):
         """Update correlation matrix using DCC_E (Engle 2000).
 
         Args:
-            z (np.array): Observed noise, usually a Normal(0,1).
-            R0 (np.array): Initial correlation matrix.
-            t (np.array): The current time.
+            z (np.ndarray): Observed noise, usually a Normal(0,1).
+            R0 (np.ndarray): Initial correlation matrix.
+            t (np.ndarray): The current time.
 
         """
         m = 2
