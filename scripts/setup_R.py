@@ -31,7 +31,10 @@ def install_R_package():
 def R_config():
     with open(r_environ, "a") as f:
         f.write(
-            f"R_HOME_USER = {r_home}\nR_LIBS_USER = {libs}\nR_PROFILE_USER = {profile}\nR_HISTFILE = {histfile}"
+            f"R_HOME_USER = {r_home}\n"
+            + f"R_LIBS_USER = {libs}\n"
+            + f"R_PROFILE_USER = {profile}\n"
+            + f"R_HISTFILE = {histfile}"
         )
 
 

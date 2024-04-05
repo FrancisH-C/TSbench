@@ -3,7 +3,8 @@
 import subprocess
 import sys
 import argparse
-import setup_R
+from scripts import setup_R
+
 
 def installation_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
@@ -28,13 +29,14 @@ def installation_parser() -> argparse.ArgumentParser:
     )
     return parser
 
+
 if __name__ == "__main__":
     parser = installation_parser()
     args = parser.parse_args()
     if args.R:
-        subprocess.check_call([sys.executable, '-m', 'pip', 'install', '-e', '.[all]'])
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "-e", ".[all]"])
         setup_R.R_directories()
         setup_R.R_config()
         setup_R.install_R_package()
     else:
-        subprocess.check_call([sys.executable, '-m', 'pip', 'install', '-e', '.[noR]'])
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "-e", ".[noR]"])

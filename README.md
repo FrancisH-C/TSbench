@@ -8,6 +8,7 @@
     - [Virtual Environment in Python](#virtual-environment-in-python)
         - [Windows](#windows)
         - [Linux](#linux)
+        - [Jupyter virtual environments](#jupyter-virtual-environments)
     - [TSbench and R](#tsbench-and-r)
         - [Limitation](#limitation)
         - [Install R](#install-r)
@@ -56,7 +57,9 @@ information on:
 - [Troubleshooting for Windows](#troubleshooting-for-windows)
 
 # Installation Information
+
 The installation has been tested with `Python 3.10.0`.
+
 ## Virtual Environment in Python
 It is strongly recommended to use a virtual environment for your Python
 installation. Some installation errors may occur otherwise due to path localization.
@@ -89,17 +92,6 @@ following command:
 conda activate TSbench
 ```
 
-#### Add to jupyter kernels
-
-You can add the environment to `Jupyter` by executing the following
-command:
-
-``` shell
-python3 -m pip install ipykernel
-python3 -m pip install ipython
-python3 -m ipykernel install --name TSbench --user
-```
-
 ### Linux
 
 One way to set up a virtual environment in `Python` is by using
@@ -123,17 +115,16 @@ following command:
 source $HOME/.venv/TSbench/bin/activate
 ```
 
-#### Add to jupyter kernels
+### Jupyter virtual environments
 
-You can add the environment to `Jupyter` by executing the following
+You can add the virtual environment to `Jupyter` by executing the following
 command:
 
 ``` shell
-python -m pip install ipykernel
-python -m pip install ipython
-python -m ipykernel install --name TSbench --user
+python3 -m pip install ipykernel
+python3 -m pip install ipython
+python3 -m ipykernel install --name TSbench --user
 ```
-
 
 ## TSbench and R
 
@@ -297,6 +288,7 @@ python -m pip uninstall rpy2
 
 
 ## Troubleshooting for Windows
+
 ### `PowerShell` `virtualenv` not working
 
 Use the following command
