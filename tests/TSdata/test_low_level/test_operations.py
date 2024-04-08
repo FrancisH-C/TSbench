@@ -1,5 +1,3 @@
-import os
-
 import numpy as np
 import pandas as pd
 
@@ -61,8 +59,14 @@ def test_operations():
         path=multiprocess_path, datatype=multiprocess_datatype, permission=permission
     )
 
-    if os.path.exists(copy_path):
-        os.rmdir(copy_path)
+    # Remove data from previous executions
+    data_loader.set_path(copy_path)
+    data_loader.rm_dataset()
+    data_loader.set_path(move_path)
+    data_loader.rm_dataset()
+    data_loader.set_path(data_path)
+
+    # Copy the data to `copy_path`
     data_loader.copy_dataset(copy_path)
 
     data_loader.move_dataset(move_path)
