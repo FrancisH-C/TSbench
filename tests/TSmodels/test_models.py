@@ -306,12 +306,15 @@ def test_MGARCH():
     negative definite matrix.
     """
     # VEC_GARCH, dim=2
-    seed = 9103
+    seed = 1234
     lag = 3
     N = 10
     dim = 2
     rg = Generator(PCG64(seed))
     vec_garch = TSmodels.VEC_GARCH(dim=dim, lag=lag, rg=rg)
+
+    timeseries = vec_garch.generate(N=N)
+    vec_garch.set_data(data=timeseries)
     vec_garch.generate(N=N)
 
     # VEC_SPD_GARCH

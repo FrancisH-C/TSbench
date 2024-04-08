@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import Callable, Optional
 
 import numpy as np
-from numpy import random as rand
 from numpy.linalg import cholesky
 
 from TSbench.TSdata.data import AnyData
@@ -41,7 +40,7 @@ class VEC_GARCH(GARCH):
         vol = np.zeros((N, self.dim, self.dim))
         for t in range(N):
             vol[t, :, :] = np.eye(self.dim, self.dim)
-        z = rand.standard_normal(size=(N, self.dim))
+        z = self.rg.standard_normal(size=(N, self.dim))
 
         # generate observations
         for t in range(self.lag, N):
@@ -129,7 +128,7 @@ class VEC_SPD_GARCH(VEC_GARCH):
         vol = np.zeros((N, self.dim, self.dim))
         for t in range(N):
             vol[t, :, :] = np.eye(self.dim, self.dim)
-        z = rand.standard_normal(size=(N, self.dim))
+        z = self.rg.standard_normal(size=(N, self.dim))
 
         # generate observations
         translations = 0
@@ -268,7 +267,7 @@ class DCC_GARCH(GeneratorModel):
         # initialization
         epsilon = np.zeros((self.dim, N))
         vol = np.zeros((N, self.dim, self.dim))
-        z = rand.standard_normal(size=(self.dim, N))
+        z = self.rg.standard_normal(size=(self.dim, N))
 
         # generate univariate
         for i in range(0, len(self.univariate)):

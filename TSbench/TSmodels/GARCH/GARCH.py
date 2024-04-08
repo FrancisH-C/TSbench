@@ -4,7 +4,6 @@ from __future__ import annotations
 from typing import Optional
 
 import numpy as np
-from numpy import random as rand
 
 from TSbench.TSdata.data import AnyData
 from TSbench.TSmodels.models import GeneratorModel
@@ -58,18 +57,18 @@ class GARCH(GeneratorModel):
         # Initialize A with lag
         if A is None:
             if self.dim == 1:
-                A = rand.uniform(size=(self.lag)) / self.lag
+                A = self.rg.uniform(size=(self.lag)) / self.lag
             else:
-                A = rand.uniform(size=(self.lag, self.dim, self.dim)) / (
+                A = self.rg.uniform(size=(self.lag, self.dim, self.dim)) / (
                     np.sqrt(9 * self.lag)
                 )
 
         # Initialize B with lag
         if B is None:
             if self.dim == 1:
-                B = rand.uniform(size=(self.lag)) / self.lag
+                B = self.rg.uniform(size=(self.lag)) / self.lag
             else:
-                B = rand.uniform(size=(self.lag, self.dim, self.dim)) / (
+                B = self.rg.uniform(size=(self.lag, self.dim, self.dim)) / (
                     np.sqrt(9 * self.lag)
                 )
 
@@ -125,7 +124,7 @@ class GARCH(GeneratorModel):
             epsilon = np.concatenate((initial[:, :, 0], epsilon), axis=0)
             vol = np.concatenate((initial[:, :, 1], vol), axis=0)
 
-        z = rand.standard_normal(N)
+        z = self.rg.standard_normal(N)
 
         # generate
         for t in range(0, N):
