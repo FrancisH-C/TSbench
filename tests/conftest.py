@@ -9,13 +9,16 @@ def pytest_addoption(parser):
     )
     parser.addoption("--R", action="store_true", default=False, help="run R tests")
     parser.addoption(
-        "--arma", action="store_true", default=False, help="run ARAMA tests"
+        "--performance",
+        action="store_true",
+        default=False,
+        help="run performance tests",
     )
 
 
 def pytest_configure(config):
     config.addinivalue_line("markers", "R: mark tests to run R")
-    config.addinivalue_line("markers", "arma: mark tests to run ARMA")
+    config.addinivalue_line("markers", "performance: mark tests to run performance")
 
 
 def pytest_collection_modifyitems(config, items):
@@ -24,10 +27,10 @@ def pytest_collection_modifyitems(config, items):
         return
 
     skip_R = pytest.mark.skip(reason="need --R option to run")
-    skip_arma = pytest.mark.skip(reason="need --arma option to run")
+    skip_performance = pytest.mark.skip(reason="need --performance option to run")
 
     for item in items:
         if "R" in item.keywords:
             item.add_marker(skip_R)
-        if "arma" in item.keywords:
-            item.add_marker(skip_arma)
+        if "performance" in item.keywords:
+            item.add_marker(skip_performance)

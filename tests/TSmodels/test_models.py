@@ -272,23 +272,6 @@ def test_parametersIO():
     assert all(cnst_model.constant == json_model.constant)
 
 
-@pytest.mark.arma
-def test_arma():
-    seed = 1234
-    N = 60
-    T = 10
-    d = 1
-    for dim in range(1, 5):
-        for lag in range(1, 5):
-            rg = Generator(PCG64(seed))
-            arma_model = TSmodels.ARMA(dim=dim, lag=lag, d=d, rg=rg)
-            timeseries = arma_model.generate(N=N)
-            arma_model.set_data(data=timeseries)
-            timeseries = arma_model.generate(N=N)
-            arma_model.train()
-            timeseries = arma_model.forecast(T=T)
-
-
 def test_GARCH():
     lag = 3
     N = 10
