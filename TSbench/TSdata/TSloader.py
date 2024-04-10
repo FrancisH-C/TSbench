@@ -47,10 +47,11 @@ class TSloader:
         if datatype is None:
             raise ValueError("Give a datatype.")
 
-        # Permissions
+        # Initialize basic parameters
         self.set_permission(permission)  # read, write, overwrite
+        self.autoload = autoload
 
-        # Initialize without parallel
+        # Initial loading needs parallel to be False
         self.parallel = False
 
         # Set path
@@ -64,7 +65,7 @@ class TSloader:
             datatype, split_pattern, subsplit_pattern, subsplit_pattern_index
         )
         # Initialize df
-        self.df = self.load(autoload=autoload)
+        self.df = self.load()
 
         # For parallel usage
         self.parallel = parallel
@@ -203,11 +204,16 @@ class TSloader:
         new_metadata_file = self.get_filename(for_metadata=True)
         shutil.copyfile(metadata_file, new_metadata_file)
 
+        # autoload is a waste of time here
+        autoload_value = self.autoload
+        self.autoload = False
         for split in self.get_split_pattern():
-            self.set_current_split(split, autoload=False)
+            self.set_current_split(split)
             dst = self.get_filename()
             src = os.path.join(old_path, os.path.basename(dst))
             shutil.copyfile(src, dst)
+        # set autoload to original value
+        self.autoload = autoload_value
 
     def _create_path(self) -> None:
         """Create the dataset if it doesn't exsist."""
@@ -766,13 +772,13 @@ class TSloader:
         else:
             self.current_split = ""
 
-    def reset_current_split(self, autoload: bool = True) -> None:
+    def reset_current_split(self) -> None:
         """Reset split index to 0."""
         self.current_split = self.subsplit_pattern[0]
-        if autoload:
+        if self.autoload:
             self.load()
 
-    def next_current_split(self, autoload: bool = True) -> None:
+    def next_current_split(self) -> None:
         """Increment split index by 1."""
         if isinstance(self.subsplit_pattern, np.ndarray):
             split_index = (
@@ -783,12 +789,12 @@ class TSloader:
 
         if split_index < len(self.subsplit_pattern):
             self.current_split = self.subsplit_pattern[split_index]
-            if autoload:
+            if self.autoload:
                 self.load()
         else:
             raise IndexError("next split out of range")
 
-    def set_current_split(self, new_split: np.ndarray, autoload: bool = True) -> None:
+    def set_current_split(self, new_split: np.ndarray) -> None:
         """Set the split.
 
         Args:
@@ -796,10 +802,10 @@ class TSloader:
 
         """
         self.current_split = new_split
-        if autoload:
+        if self.autoload:
             self.load()
 
-    def index_set_current_split(self, index: int, autoload: bool = True) -> None:
+    def index_set_current_split(self, index: int) -> None:
         """Set the split index.
 
         Args:
@@ -807,7 +813,7 @@ class TSloader:
 
         """
         self.current_split = self.subsplit_pattern[index]
-        if autoload:
+        if self.autoload:
             self.load()
 
     def get_filename(self, for_metadata: bool = False) -> str:
@@ -821,7 +827,7 @@ class TSloader:
         filename = self.datatype + "-" + self.current_split + ".pqt"
         return self._append_path(filename)
 
-    def load(self, autoload: bool = True) -> pd.DataFrame:
+    def load(self) -> pd.DataFrame:
         """Load datatatype's data.
 
         Returns:
@@ -829,7 +835,7 @@ class TSloader:
 
         """
         filename = self.get_filename()
-        if self.datatype is None or not os.path.isfile(filename) or not autoload:
+        if self.datatype is None or not os.path.isfile(filename) or not self.autoload:
             self.df = pd.DataFrame(
                 index=pd.MultiIndex.from_arrays(
                     [[], [], []], names=("ID", "timestamp", "dim")
@@ -1089,7 +1095,7 @@ class TSloader:
             raise ValueError("To remove an ID, you need 'overwrite' permission.")
 
         elif ID not in self.df.index:
-            raise ValueError("ID does not exsit and trying to remove it.")
+            raise ValueError("ID does not exsist and trying to remove it.")
 
         # update df
         self.df.drop(index=ID, level="ID", inplace=True)
@@ -1258,7 +1264,7 @@ class LoaderTSdfCSV(LoaderTSdf):
             raise ValueError("This loader has only 'read' permission.")
         self.metadata.to_csv(self.get_filename(for_metadata=True))
 
-    def load(self, autoload=True) -> pd.DataFrame:
+    def load(self) -> pd.DataFrame:
         """Load datatatype's data.
 
         Returns:
@@ -1266,7 +1272,7 @@ class LoaderTSdfCSV(LoaderTSdf):
 
         """
         filename = self.get_filename()
-        if self.datatype is None or not os.path.isfile(filename) or not autoload:
+        if self.datatype is None or not os.path.isfile(filename) or not self.autoload:
             self.df = pd.DataFrame(
                 index=pd.MultiIndex.from_arrays(
                     [[], [], []], names=("ID", "timestamp", "dim")
@@ -1418,7 +1424,6 @@ class LoadersProcess:
             except KeyError:
                 print(IDs, "not in ", loader.current_split, "data")
                 return
-
             split = loader.current_split + "_" + "".join(IDs)
             output_loader = LoaderTSdf(
                 path=self.output_path,
@@ -1461,7 +1466,7 @@ class LoadersProcess:
 
         def df_ID_function(loader: "TSloader") -> None:
             for split in loader.subsplit_pattern:
-                loader.set_current_split(split, autoload=self.autoload)
+                loader.set_current_split(split)
                 # run df_function in parallel with the available n_procs
                 if self.parallel:
                     Parallel(n_jobs=self.n_procs)(
@@ -1489,7 +1494,7 @@ class LoadersProcess:
     def run_loader(self) -> None:
         def loaders_split_function(loader: "TSloader") -> None:
             for split in loader.subsplit_pattern:
-                loader.set_current_split(split, autoload=self.autoload)
+                loader.set_current_split(split)
                 self.loader_function(loader)
 
         if self.parallel:
