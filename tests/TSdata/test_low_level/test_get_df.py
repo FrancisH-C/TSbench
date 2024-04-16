@@ -33,15 +33,33 @@ def simple_loader():
 
 
 def test_get_df():
-    IDs = ["name1", "added_ID"]
+    IDs = np.array(["name1", "added_ID"])
     timestamps = np.array(["0", "1", "5"])
-    dims = ["0"]
+    dims = np.array(["0"])
 
     loader = simple_loader()
     loader.get_df()
-    loader.get_df(IDs=IDs)
     loader.get_df(timestamps=timestamps)
     loader.get_df(dims=dims)
     loader.get_df(IDs=IDs, timestamps=timestamps)
     loader.get_df(timestamps=timestamps, dims=dims)
     loader.get_df(IDs=IDs, timestamps=timestamps, dims=dims)
+    loader.get_df(IDs=IDs)
+    assert loader.get_df(IDs=IDs[0:1]).index.get_level_values("ID").unique() == IDs[0]
+    assert (
+        loader.get_df(timestamps=timestamps)
+        .index.get_level_values("timestamp")
+        .unique()
+        == timestamps
+    ).all()
+    assert loader.get_df(dims=dims).index.get_level_values("dim").unique() == dims
+
+
+def test_get_timestamp():
+    timestamps = np.array(list(map(str, np.arange(10))))
+
+    loader = simple_loader()
+    assert (loader.get_timestamp() == timestamps).all()
+    assert (loader.get_timestamp(start="2") == timestamps[2:]).all()
+    assert (loader.get_timestamp(end="2") == timestamps[:2]).all()
+    assert (loader.get_timestamp(start="1", end="2") == timestamps[1:2]).all()

@@ -65,7 +65,14 @@ class TSloader:
             datatype, split_pattern, subsplit_pattern, subsplit_pattern_index
         )
         # Initialize df
-        self.df = self.load()
+        if self.autoload:
+            self.df = self.load()
+        else:
+            self.df = pd.DataFrame(
+                index=pd.MultiIndex.from_arrays(
+                    [[], [], []], names=("ID", "timestamp", "dim")
+                )
+            )
 
         # For parallel usage
         self.parallel = parallel
