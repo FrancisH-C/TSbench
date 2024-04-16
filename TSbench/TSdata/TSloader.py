@@ -721,9 +721,6 @@ class TSloader:
         elif timestamps is None:
             timestamps = slice(None)
 
-        # What follows does
-        # self.df.loc[IDs, timestamps,dims][features]
-        # but much more quickly
         if IDs is None:
             IDs = slice(None)
         if dims is None:
@@ -731,24 +728,35 @@ class TSloader:
         if features is None:
             features = slice(None)
 
-        # keep index information in columns
-        df = self.df
-        df = df.reset_index(drop=False)
-        df.set_index(["ID", "timestamp", "dim"], drop=False, inplace=True)
+        return convert_from_TSdf(self.df.loc[IDs, timestamps, dims][features], tstype)
+        # What follows does
+        # self.df.loc[IDs, timestamps,dims][features]
+        # much more quickly but create a lot of DataFrames (using copy)
+        # if IDs is None:
+        #     IDs = slice(None)
+        # if dims is None:
+        #     dims = slice(None)
+        # if features is None:
+        #     features = slice(None)
 
-        # fix and drop ID index
-        df = df.loc[IDs]
-        df = df.droplevel("ID")
-        # fix and drop timestamps
-        df = df.loc[timestamps]
-        df = df.droplevel("timestamp")
-        # fix dims, no need to drop
-        df = df.loc[dims]
+        # # keep index information in columns
+        # df = self.df
+        # df = df.reset_index(drop=False)
+        # df.set_index(["ID", "timestamp", "dim"], drop=False, inplace=True)
 
-        # set index back
-        df.set_index(["ID", "timestamp", "dim"], drop=True, inplace=True)
+        # # fix and drop ID index
+        # df = df.loc[IDs]
+        # df = df.droplevel("ID")
+        # # fix and drop timestamps
+        # df = df.loc[timestamps]
+        # df = df.droplevel("timestamp")
+        # # fix dims, no need to drop
+        # df = df.loc[dims]
 
-        return convert_from_TSdf(df[features], tstype)
+        # # set index back
+        # df.set_index(["ID", "timestamp", "dim"], drop=True, inplace=True)
+
+        # return convert_from_TSdf(df[features], tstype)
 
     def get_split_pattern(self) -> np.ndarray:
         return self.metadata.at[self.datatype, "split_pattern"]
