@@ -21,4 +21,4 @@ def test_metadata():
     TSdf = DataFormat.df_to_TSdf(df, ID=ID, timestamp=timestamp)
     loader.add_data(TSdf, ID=ID, collision="overwrite")
 
-    loader._update_metadata()
+    loader.update_metadata()

@@ -141,7 +141,7 @@ class VEC_SPD_GARCH(VEC_GARCH):
             vol[t, :, :] = (vol[t, :, :] + np.transpose(vol[t, :, :])) / 2
 
             # Transalte to make positive definite
-            eigenvalues, v = np.linalg.eigh(vol[t, :, :])
+            eigenvalues, _ = np.linalg.eigh(vol[t, :, :])
             if eigenvalues[0] < 0:
                 # add the smallest egeinvalue to diagonal plus an epsilon to account for
                 # machine error.

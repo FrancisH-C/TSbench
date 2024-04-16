@@ -119,29 +119,29 @@ class BaseModel:
 
     def get_timestamp(
         self,
-        start: Optional[pd.Index] = None,
+        start: Optional[int] = None,
         start_index: Optional[int] = None,
-        end: Optional[list[int] | pd.Index] = None,
+        end: Optional[int | str] = None,
         end_index: Optional[int] = None,
-    ) -> pd.Index | np.ndarray:
+    ) -> np.ndarray:
         return self.loader.get_timestamp(
             start=start,
             start_index=start_index,
             end=end,
             end_index=end_index,
-            IDs=[str(self)],
+            IDs=np.array([str(self)]),
         )
 
     def get_data(
         self,
         tstype: Type[Data] = pd.DataFrame,
-        start: Optional[pd.Index] = None,
+        start: Optional[int | str] = None,
         start_index: Optional[int] = None,
-        end: Optional[list[int] | pd.Index] = None,
+        end: Optional[int | str] = None,
         end_index: Optional[int] = None,
-        timestamps: Optional[slice | np.ndarray | pd.Index] = None,
-        dims: Optional[list[str]] = None,
-        features: Optional[list[str]] = None,
+        timestamps: Optional[slice | np.ndarray] = None,
+        dims: Optional[np.ndarray] = None,
+        features: Optional[np.ndarray] = None,
     ) -> Data:
         """Get the model's data.
 
@@ -151,7 +151,7 @@ class BaseModel:
 
         """
         return self.loader.get_timeseries(
-            IDs=[str(self)],
+            IDs=np.array([str(self)]),
             start=start,
             start_index=start_index,
             end=end,

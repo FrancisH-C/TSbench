@@ -1,5 +1,6 @@
 import timeit
 
+import numpy as np
 import pytest
 from numpy.random import PCG64, Generator
 
@@ -27,10 +28,10 @@ def test_arma():
 @pytest.mark.performance
 def test_forecast_performance():
     def make_forecast(T_forecast):
-        ID = "Constant"
+        IDs = np.array(["Constant"])
         path = "data/"
         datatype = "simulated"
-        feature_label = ["feature"]
+        feature_label = np.array(["feature"])
         loader = LoaderTSdf(path=path, datatype=datatype)
         cnst_model = TSmodels.Constant(feature_label=feature_label)
 
@@ -41,7 +42,7 @@ def test_forecast_performance():
         cnst_model.set_data(data=df)
         cnst_model.train()
 
-        df = loader.get_df(IDs=[ID], end=5, features=feature_label)
+        df = loader.get_df(IDs=IDs, end=5, features=feature_label)
         cnst_model.set_data(data=df)
         cnst_model.forecast(T=T_forecast)
 

@@ -12,8 +12,8 @@ def test_data_to_reprodue():
     loader = LoaderTSdf(path=path, datatype=datatype)
 
     seed = 1234
-    ID = ["Constant"]
-    feature_label = ["feature"]
+    IDs = np.array(["Constant"])
+    feature_label = np.array(["feature"])
     cnst_model = TSmodels.Constant(
         dim=1, rg=Generator(PCG64(seed)), feature_label=feature_label
     )
@@ -22,16 +22,16 @@ def test_data_to_reprodue():
     cnst_model.generate(T)
     cnst_model.register_data(loader, collision="overwrite")
 
-    timeseries = loader.get_timeseries(IDs=ID, end_index=4, features=feature_label)
+    timeseries = loader.get_timeseries(IDs=IDs, end_index=4, features=feature_label)
     cnst_model.set_data(data=timeseries)
 
-    timeseries = loader.get_timeseries(IDs=ID, end=[3], features=feature_label)
+    timeseries = loader.get_timeseries(IDs=IDs, end=3, features=feature_label)
     cnst_model.set_data(data=timeseries)
     T = 5
     cnst_model.forecast(T)
     cnst_model.register_data(loader, append_to_feature=str(cnst_model))
 
-    timeseries = loader.get_timeseries(IDs=ID, end_index=10, features=feature_label)
+    timeseries = loader.get_timeseries(IDs=IDs, end_index=10, features=feature_label)
     cnst_model.set_data(data=timeseries)
     T = 5
     cnst_model.forecast(T)
@@ -44,6 +44,8 @@ def is_reproduced(loader):
     path = "data/test_models/"
     datatype = "simulated"
     reproduce_loader = LoaderTSdf(path=path, datatype=datatype)
+    # print("OG")
+    # print(reproduce_loader.get_df())
     assert loader.get_df().equals(reproduce_loader.get_df())
 
 
@@ -96,7 +98,7 @@ def test_model_forecast_indexing():
     N = 10
     T = 5
     dim = 1
-    feature_label = ["feature"]
+    feature_label = np.array(["feature"])
     rg = Generator(PCG64(seed))
     # loader
     path = "data/"
@@ -106,17 +108,17 @@ def test_model_forecast_indexing():
     cnst_model = TSmodels.Constant(dim=dim, rg=rg, feature_label=feature_label)
     # Generate
     cnst_model.generate(N)
-    ID = str(cnst_model)
+    IDs = np.array([str(cnst_model)])
     cnst_model.register_data(loader)
 
     # Test Forecast
     # forecast IS
-    timeseries = loader.get_timeseries(IDs=[ID], end=[3], features=["feature"])
+    timeseries = loader.get_timeseries(IDs=IDs, end=3, features=feature_label)
     cnst_model.set_data(timeseries)
     cnst_model.forecast(T, reset_timestamp=False, collision="overwrite")
     cnst_model.register_data(loader, append_to_feature=str(cnst_model))
     ## forecast OOS
-    timeseries = loader.get_timeseries(IDs=[ID], end_index=10, features=["feature"])
+    timeseries = loader.get_timeseries(IDs=IDs, end_index=10, features=feature_label)
     cnst_model.set_data(timeseries)
     cnst_model.forecast(T, reset_timestamp=False, collision="overwrite")
     cnst_model.register_data(loader, append_to_feature=str(cnst_model))
@@ -126,12 +128,12 @@ def test_model_forecast_indexing():
     # Test rolling forecast
     loader.rm_feature("feature_Constant")
     ## rolling forecast IS
-    timeseries = loader.get_timeseries(IDs=[ID], end=[3], features=["feature"])
+    timeseries = loader.get_timeseries(IDs=IDs, end=3, features=feature_label)
     cnst_model.set_data(timeseries)
     cnst_model.rolling_forecast(T)
     cnst_model.register_data(loader, append_to_feature=str(cnst_model))
     ## rolling forecast OOS
-    timeseries = loader.get_timeseries(IDs=[ID], end_index=10, features=["feature"])
+    timeseries = loader.get_timeseries(IDs=IDs, end_index=10, features=feature_label)
     cnst_model.set_data(timeseries)
     cnst_model.rolling_forecast(T)
     cnst_model.register_data(loader, append_to_feature=str(cnst_model))
@@ -144,7 +146,7 @@ def test_model_forecast_indexing():
     batch_size = 5
     window_size = 2
     timeseries = loader.get_timeseries(
-        IDs=["Constant"], start_index=0, end_index=10, features=["feature"]
+        IDs=IDs, start_index=0, end_index=10, features=feature_label
     )
     cnst_model.set_data(timeseries)
     cnst_model.rolling_forecast(T, batch_size=batch_size, window_size=window_size)
@@ -159,7 +161,7 @@ def test_model_forecast_indexing():
     batch_size = 9
     window_size = 2
     timeseries = loader.get_timeseries(
-        IDs=["Constant"], start_index=0, end_index=10, features=["feature"]
+        IDs=IDs, start_index=0, end_index=10, features=feature_label
     )
     cnst_model.set_data(timeseries)
     cnst_model.rolling_forecast(T, batch_size=batch_size, window_size=window_size)
@@ -178,8 +180,8 @@ def test_model_forecast():
     N = 10
     T = 5
     dim = 1
+    feature_label = np.array(["feature"])
     for dim in range(1, 6):
-        feature_label = ["feature"]
         rg = Generator(PCG64(seed))
         # loader
         path = "data/"
@@ -189,17 +191,19 @@ def test_model_forecast():
         cnst_model = TSmodels.Constant(dim=dim, rg=rg, feature_label=feature_label)
         # Generate
         cnst_model.generate(N)
-        ID = str(cnst_model)
+        IDs = np.array([str(cnst_model)])
         cnst_model.register_data(loader)
 
         # Test Forecast
         # forecast IS
-        timeseries = loader.get_timeseries(IDs=[ID], end=[3], features=["feature"])
+        timeseries = loader.get_timeseries(IDs=IDs, end=3, features=feature_label)
         cnst_model.set_data(timeseries)
         cnst_model.forecast(T, reset_timestamp=False, collision="overwrite")
         cnst_model.register_data(loader, append_to_feature=str(cnst_model))
         ## forecast OOS
-        timeseries = loader.get_timeseries(IDs=[ID], end_index=10, features=["feature"])
+        timeseries = loader.get_timeseries(
+            IDs=IDs, end_index=10, features=feature_label
+        )
         cnst_model.set_data(timeseries)
         cnst_model.forecast(T, reset_timestamp=False, collision="overwrite")
         cnst_model.register_data(loader, append_to_feature=str(cnst_model))
@@ -207,12 +211,14 @@ def test_model_forecast():
         # Test rolling forecast
         loader.rm_feature("feature_Constant")
         ## rolling forecast IS
-        timeseries = loader.get_timeseries(IDs=[ID], end=[3], features=["feature"])
+        timeseries = loader.get_timeseries(IDs=IDs, end=3, features=feature_label)
         cnst_model.set_data(timeseries)
         cnst_model.rolling_forecast(T)
         cnst_model.register_data(loader, append_to_feature=str(cnst_model))
         ## rolling forecast OOS
-        timeseries = loader.get_timeseries(IDs=[ID], end_index=10, features=["feature"])
+        timeseries = loader.get_timeseries(
+            IDs=IDs, end_index=10, features=feature_label
+        )
         cnst_model.set_data(timeseries)
         cnst_model.rolling_forecast(T)
         cnst_model.register_data(loader, append_to_feature=str(cnst_model))
@@ -223,7 +229,7 @@ def test_model_forecast():
         batch_size = 5
         window_size = 2
         timeseries = loader.get_timeseries(
-            IDs=["Constant"], start_index=0, end_index=10, features=["feature"]
+            IDs=IDs, start_index=0, end_index=10, features=feature_label
         )
         cnst_model.set_data(timeseries)
         cnst_model.rolling_forecast(T, batch_size=batch_size, window_size=window_size)
@@ -238,7 +244,7 @@ def test_model_forecast():
         batch_size = 9
         window_size = 2
         timeseries = loader.get_timeseries(
-            IDs=["Constant"], start_index=0, end_index=10, features=["feature"]
+            IDs=IDs, start_index=0, end_index=10, features=feature_label
         )
         cnst_model.set_data(timeseries)
         cnst_model.rolling_forecast(T, batch_size=batch_size, window_size=window_size)
@@ -254,7 +260,7 @@ def test_model_forecast():
 
 def test_parametersIO():
     seed = 1234
-    feature_label = ["feature"]
+    feature_label = np.array(["feature"])
     rg = Generator(PCG64(seed))
     # loader
     # Simple model

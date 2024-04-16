@@ -61,5 +61,5 @@ def merge_dataset(
             dst = os.path.join(merge_path, filename)
             shutil.copyfile(src, dst)
 
-    merge_loader.merge_metadata(write_metadata=True, rm=True)
+    merge_loader.merge_splitted_metadata(write_metadata=True, rm=True)
     return merge_loader

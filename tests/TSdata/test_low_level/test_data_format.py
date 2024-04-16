@@ -73,10 +73,11 @@ def test_simple_types_data_format():
     # use add_data
     loader.add_data(ID=ID1, data=TSdf1, collision="overwrite")
     loader.add_data(ID=ID2, data=TSdf2, collision="overwrite")
+
     assert (
-        loader.get_df(IDs=[ID1])
+        loader.get_df(IDs=np.array([ID1]))
         .droplevel("ID")
-        .equals(loader.get_df(IDs=[ID2]).droplevel("ID"))
+        .equals(loader.get_df(IDs=np.array([ID2])).droplevel("ID"))
     )
 
     loader.write()

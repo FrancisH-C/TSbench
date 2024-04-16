@@ -106,7 +106,7 @@ def test_permission():
     with pytest.raises(ValueError):
         loader.write_metadata()
     with pytest.raises(ValueError):
-        loader.merge_metadata()
+        loader.merge_splitted_metadata()
     with pytest.raises(ValueError):
         loader.rm_dataset()
     with pytest.raises(ValueError):

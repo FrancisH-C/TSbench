@@ -68,7 +68,7 @@ def test_multiprocessing():
     )
     p.run_loader()
 
-    metaloader.merge_metadata(rm=False)
+    metaloader.merge_splitted_metadata(rm=False)
 
     metaloader = LoaderTSdf(path=path, datatype=datatype, permission=permission)
 
