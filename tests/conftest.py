@@ -1,4 +1,4 @@
-# content of conftest.py
+"""Conftest to skip certain marks by default, unless a flag is specified."""
 
 import pytest
 
@@ -26,11 +26,12 @@ def pytest_collection_modifyitems(config, items):
         # --run--all given in cli: run all
         return
 
-    skip_R = pytest.mark.skip(reason="need --R option to run")
-    skip_performance = pytest.mark.skip(reason="need --performance option to run")
-
-    for item in items:
-        if "R" in item.keywords:
-            item.add_marker(skip_R)
-        if "performance" in item.keywords:
-            item.add_marker(skip_performance)
+    # List of options to run.
+    option_flags = ["--performance", "--R"]
+    # Check, for every option flag, if it is specified run it. Otherwise skip it.
+    for option in option_flags:
+        if not config.getoption(option):
+            skip_option = pytest.mark.skip(reason=f"need the {option} option to run")
+            for item in items:
+                if option[2:] in item.keywords:
+                    item.add_marker(skip_option)
