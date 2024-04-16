@@ -91,7 +91,6 @@ def df_to_TSdf(
 
     """
     # dim
-    df = df.copy()
     df = df.reset_index()  # put all data in columns
     if "index" in list(df.columns):  # remove index column is it's there
         df = df.drop(columns=["index"])
@@ -155,8 +154,6 @@ def list_np_to_TSdf(
     # df
     if df is None:
         df = pd.DataFrame()
-    else:
-        df = df.copy()
 
     # dim
     if dim_label is None:
@@ -224,8 +221,6 @@ def np_to_TSdf(
     # df
     if df is None:
         df = pd.DataFrame()
-    else:
-        df = df.copy()
 
     # dim
     if dim_label is None:
