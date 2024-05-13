@@ -50,4 +50,3 @@ def test_forecast_performance():
     print(timeit.timeit(lambda: make_forecast(100000), number=1))
     print(timeit.timeit(lambda: make_forecast(1000000), number=1))
     print(timeit.timeit(lambda: make_forecast(10000000), number=1))
-    # cProfile.run('timeit.timeit(lambda: foo(10000000), number=1)')

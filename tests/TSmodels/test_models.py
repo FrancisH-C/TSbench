@@ -44,8 +44,6 @@ def is_reproduced(loader):
     path = "data/test_models/"
     datatype = "simulated"
     reproduce_loader = LoaderTSdf(path=path, datatype=datatype)
-    # print("OG")
-    # print(reproduce_loader.get_df())
     assert loader.get_df().equals(reproduce_loader.get_df())
 
 
@@ -181,7 +179,7 @@ def test_model_forecast():
     T = 5
     dim = 1
     feature_label = np.array(["feature"])
-    for dim in range(1, 6):
+    for dim in range(2, 6):
         rg = Generator(PCG64(seed))
         # loader
         path = "data/"

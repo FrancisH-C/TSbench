@@ -1,15 +1,15 @@
 """Data convertion between TimeSeries DataFrame and multiple common types."""
 
-from typing import Any, Optional, Union
+from typing import Any, Optional, Type, Union
 
 import numpy as np
 import pandas as pd
 
-Data = Union[list, np.ndarray, pd.DataFrame]
+from TSbench.TSdata.data import AnyData, Data
 
 
 def convert_to_TSdf(
-    data: Data,
+    data: AnyData,
     ID: Optional[str] = None,
     timestamp: Optional[list | np.ndarray | pd.Index] = None,
     dim_label: Optional[list[str] | np.ndarray] = None,
@@ -279,3 +279,44 @@ def dict_to_TSdf(
             feature_label=[feature],
         )
     return df
+
+
+def convert_from_TSdf(
+    df: Optional[pd.DataFrame] = None, tstype: Type[Data] = pd.DataFrame
+) -> Data:
+    if df is None or df.size == 0:
+        df = pd.DataFrame(
+            index=pd.MultiIndex.from_arrays(
+                [[], [], []], names=("ID", "timestamp", "dim")
+            )
+        )
+        arr = np.array([])
+        if isinstance(arr, tstype):  # np.ndarray
+            return arr
+    if isinstance(df, tstype):  # pd.DataFrame
+        return df
+
+    dim_label = df.index.get_level_values("dim").unique()
+    features = df.columns
+    if len(features) == 1 and len(dim_label) == 1:  # ndim == 1
+        arr = df.to_numpy()[:]
+        if isinstance(arr, tstype):  # np.ndarray
+            return arr
+
+    timestamps = df.index.get_level_values("timestamp").unique()
+    if len(features) == 1:  # ndim == 2
+        # ndim == 2
+        arr = np.zeros((len(timestamps), len(dim_label)))
+        for j in range(len(dim_label)):
+            arr[:, j] = df.loc[:, :, dim_label[j]].to_numpy()[:, 0]
+
+        if isinstance(arr, tstype):  # np.ndarray
+            return arr
+    else:  # len(features) >= 2: i.e. ndim == 3
+        arr = np.zeros((len(timestamps), len(dim_label), len(features)))
+        for k in range(len(features)):
+            for j in range(len(dim_label)):
+                arr[:, j, k] = df.loc[:, :, dim_label[j]][features[k]].to_numpy()
+        if isinstance(arr, tstype):  # np.ndarray
+            return arr
+    raise ValueError("Not a valid timeseries datatype")

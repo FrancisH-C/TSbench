@@ -13,16 +13,15 @@ import pandas as pd
 from joblib import Parallel, delayed
 
 from TSbench.TSdata.data import AnyData, Data
-from TSbench.TSdata.DataFormat import convert_to_TSdf
+from TSbench.TSdata.DataFormat import convert_to_TSdf, convert_from_TSdf
 
 
 class TSloader:
     path: str
     df: pd.DataFrame
     datatype: str
-    split_pattern: np.ndarray
     subsplit_pattern: np.ndarray
-    parallel: bool
+    current_split: str
     permission: str
     autoload: bool
 
@@ -33,7 +32,6 @@ class TSloader:
         split_pattern: Optional[np.ndarray] = None,
         subsplit_pattern: Optional[np.ndarray] = None,
         subsplit_pattern_index: Optional[np.ndarray] = None,
-        parallel: bool = False,
         permission: str = "overwrite",
         autoload: bool = True,
     ) -> None:
@@ -50,9 +48,6 @@ class TSloader:
         # Initialize basic parameters
         self.set_permission(permission)  # read, write, overwrite
         self.autoload = autoload
-
-        # Initial loading needs parallel to be False
-        self.parallel = False
 
         # Set path
         self.set_path(path)
@@ -73,9 +68,6 @@ class TSloader:
                     [[], [], []], names=("ID", "timestamp", "dim")
                 )
             )
-
-        # For parallel usage
-        self.parallel = parallel
 
     def set_path(self, path: str, ensure_path=True) -> None:
         """Set the current path.
@@ -334,7 +326,7 @@ class TSloader:
         )
         self.append_to_metadata(features=np.array(self.df.columns))
 
-    def update_split_from_dataset(self) -> None:
+    def update_split_pattern_from_dataset(self) -> None:
         """Update metadata using df."""
         split_pattern = []
         for filename in os.listdir(self.path):
@@ -345,14 +337,15 @@ class TSloader:
         split_pattern = np.sort(split_pattern)
         self.set_metadata(split_pattern=split_pattern)
 
-    def update_dataset_metadata(self) -> None:
-        """Update metadata using df."""
+    def update_metadata_from_dataset(self) -> None:
+        """Update metadata using dataset."""
         for datatype in self.list_datatypes():
             self.set_datatype(datatype)
+
+            self.update_split_pattern_from_dataset()
             self.df = self.load()
 
             self.update_metadata()
-            self.update_split_from_dataset()
 
         if not self.metadata.empty:
             self.write_metadata()
@@ -386,8 +379,7 @@ class TSloader:
         Raises:
             ValueError: If trying to write metadata with 'read'
                 permission; Or if trying to remove metadata (on disk or
-                memory) without 'overwrite' permission; Or if `parallel`
-                attribute is `True`.
+                memory) without 'overwrite' permission.
 
         """
         if self.permission == "read" and self.write:
@@ -404,11 +396,6 @@ class TSloader:
             raise ValueError(
                 "Trying to merge metadata but it already exists. "
                 + "To force it, change permission to 'overwrite'."
-            )
-
-        if self.parallel:
-            raise ValueError(
-                "Set the parallel execution attribute " + "to `False` before merging."
             )
 
         initial_datatype = self.datatype
@@ -455,12 +442,8 @@ class TSloader:
                 "Trying to merge metadata but it already exists. "
                 + "To force it, change permission to 'overwrite'."
             )
-        if loader.parallel:
-            raise ValueError(
-                "Set the parallel execution attribute " + "to `False` before merging."
-            )
 
-        def merge_day_wise(loader: "TSloader", new_split: np.ndarray) -> None:
+        def merge_day_wise(loader: "TSloader", new_split: str) -> None:
             merge_loader = LoaderTSdf(path=loader.path, datatype=loader.datatype)
             merge_loader.set_metadata(split_pattern=new_split_pattern)
             merge_loader.set_current_split(new_split)
@@ -488,24 +471,16 @@ class TSloader:
             )
         )
 
-        Parallel(n_jobs=n_jobs)(
-            delayed(merge_day_wise)(loader, new_split)
-            for new_split in new_split_pattern
-        )
+        with Parallel(n_jobs=n_jobs) as parallel:
+            parallel(
+                delayed(merge_day_wise)(loader, new_split)
+                for new_split in new_split_pattern
+            )
 
         if write_metadata:
             metadata_loader = LoaderTSdf(path=loader.path, datatype=loader.datatype)
             metadata_loader.set_metadata(split_pattern=new_split_pattern)
             metadata_loader.write_metadata()
-
-    def toggle_parallel(self) -> None:
-        """Toggle parallel option."""
-        if self.parallel:
-            self.parallel = False
-            print("Parallel mode deactivated")
-        else:
-            self.parallel = True
-            print("Parallel mode activated")
 
     def load_metadata(self) -> pd.DataFrame:
         """Load datataset's metadata.
@@ -636,37 +611,36 @@ class TSloader:
         end: Optional[int | str] = None,
         end_index: Optional[int] = None,
         IDs: Optional[slice | np.ndarray] = None,
+        unique: bool = False,
     ) -> np.ndarray:
-        """Get timestamp for the datatype."""
-        if IDs is None:
-            IDs = slice(None)
+        """Get all timestamps for the given IDs.
 
+        If multiple IDs are given (or all by default), timestamps are repeated
+        """
         if start is not None and start_index is not None:
             raise ValueError("Either give start or a start_index")
         elif end is not None and end_index is not None:
             raise ValueError("Either give end or a end_index")
 
+        if IDs is None:
+            IDs = slice(None)
+
         # get all timestamps
-        timestamps = np.array(
-            pd.unique(self.df.loc[IDs].index.get_level_values("timestamp"))
-        )
-        # If len(IDs) == 1, timestamps is sorted. Else,
+        dim_dropped_df = self.df.loc[IDs, :, self.get_dim_label()[0]]
+        timestamps = np.array(dim_dropped_df.index.get_level_values("timestamp"))
+
+        if unique:
+            timestamps = np.unique(timestamps)
+
+        # If len(IDs) == 1, timestamps is sorted; else,
         if isinstance(IDs, slice) or len(IDs) != 1:
             timestamps = np.sort(timestamps)
 
         if start is not None:
             start_index = int(np.searchsorted(timestamps, start))
-            # if isinstance(index, np.ndarray):
-            #     start_index = index[0]
-            # elif isinstance(index, int):
-            #     start_index = index
 
         if end is not None:
             end_index = int(np.searchsorted(timestamps, end))
-            # if isinstance(index, np.ndarray):
-            #     end_index = index[0]
-            # elif isinstance(index, int):
-            #     end_index = index
 
         return timestamps[start_index:end_index]
 
@@ -694,18 +668,6 @@ class TSloader:
         if self.df.empty or all(arg is None for arg in args):
             return convert_from_TSdf(self.df, tstype)
 
-        # Is it the good type
-        if (
-            not isinstance(IDs, np.ndarray)
-            and not isinstance(timestamps, np.ndarray)
-            and not isinstance(dims, np.ndarray)
-            and not isinstance(features, np.ndarray)
-        ):
-            raise ValueError(
-                "IDs, timestamps, dims and features all need to be np.ndarray."
-                + "Verify if that you didn't just give an array entry (arr[0])."
-            )
-
         if timestamps is not None and any(arg is not None for arg in args[0:4]):
             raise ValueError("Give either timestamp or start/end, not both.")
 
@@ -730,7 +692,7 @@ class TSloader:
 
         return convert_from_TSdf(self.df.loc[IDs, timestamps, dims][features], tstype)
         # What follows does
-        # self.df.loc[IDs, timestamps,dims][features]
+        # self.df.loc[IDs, timestamps, dims][features]
         # much more quickly but create a lot of DataFrames (using copy)
         # if IDs is None:
         #     IDs = slice(None)
@@ -757,6 +719,17 @@ class TSloader:
         # df.set_index(["ID", "timestamp", "dim"], drop=True, inplace=True)
 
         # return convert_from_TSdf(df[features], tstype)
+
+    def concat_subsplit_pattern(self):
+        df = pd.DataFrame(
+            index=pd.MultiIndex.from_arrays(
+                [[], [], []], names=("ID", "timestamp", "dim")
+            )
+        )
+        for split in self.get_split_pattern():
+            self.set_current_split(split)
+            df = pd.concat([df, self.df], axis=0)
+        self.df = df
 
     def get_split_pattern(self) -> np.ndarray:
         return self.metadata.at[self.datatype, "split_pattern"]
@@ -805,7 +778,10 @@ class TSloader:
             if set(subsplit_pattern).issubset(set(split_pattern)):
                 self.subsplit_pattern = subsplit_pattern
             else:
-                raise ValueError("Invalid split names.")
+                raise ValueError(
+                    "Invalid sub split names : "
+                    f"{set(subsplit_pattern) - set(split_pattern)}"
+                )
 
         if len(self.subsplit_pattern) > 0:
             self.current_split = self.subsplit_pattern[0]
@@ -821,7 +797,7 @@ class TSloader:
     def next_current_split(self) -> None:
         """Increment split index by 1."""
         if isinstance(self.subsplit_pattern, np.ndarray):
-            split_index = (
+            split_index: int = (
                 np.where(self.subsplit_pattern == self.current_split)[0][0] + 1
             )
         elif isinstance(self.subsplit_pattern, list):
@@ -829,12 +805,13 @@ class TSloader:
 
         if split_index < len(self.subsplit_pattern):
             self.current_split = self.subsplit_pattern[split_index]
+            # self.current_split = self.subsplit_pattern[0]
             if self.autoload:
                 self.load()
         else:
             raise IndexError("next split out of range")
 
-    def set_current_split(self, new_split: np.ndarray) -> None:
+    def set_current_split(self, new_split: str) -> None:
         """Set the split.
 
         Args:
@@ -846,7 +823,7 @@ class TSloader:
             self.load()
 
     def index_set_current_split(self, index: int) -> None:
-        """Set the split index.
+        """Set the split using index.
 
         Args:
             index (int): Value to set the current split index.
@@ -858,10 +835,7 @@ class TSloader:
 
     def get_filename(self, for_metadata: bool = False) -> str:
         if for_metadata:
-            filename = "metadata"
-            if self.parallel:
-                filename += "-" + self.current_split
-            filename += ".pqt"
+            filename = "metadata.pqt"
             return self._append_path(filename)
 
         filename = self.datatype + "-" + self.current_split + ".pqt"
@@ -944,7 +918,8 @@ class TSloader:
         self.df = df
 
         if update_metadata:
-            self.update_metadata()  # upate metadata
+            # upate metadata
+            self.update_metadata()
 
     def rm_datatype(self, rm_from_metadata: bool = True) -> None:
         """Remove datatatype's data.
@@ -971,8 +946,11 @@ class TSloader:
         if rm_from_metadata:
             self.metadata.drop(self.datatype, inplace=True)
 
-    def get_IDs(self) -> np.ndarray:
-        return self.metadata.loc[self.datatype, "IDs"]
+    def get_IDs(self, from_metadata=False) -> np.ndarray:
+        if from_metadata:
+            return self.metadata.loc[self.datatype, "IDs"]
+        else:
+            return np.unique(self.get_df().index.get_level_values("ID"))
 
     def get_dim_label(self, ID: Optional[str] = None) -> pd.Index:
         if ID is None:
@@ -1065,9 +1043,9 @@ class TSloader:
                 )
         else:
             # Append the ID to `self.df`.
-            self.df = df.combine_first(self.df)
+            # self.df = df.combine_first(self.df)
             # faster?
-            # self.df = pd.concat([self.df, df], axis=0)
+            self.df = pd.concat([self.df, df], axis=0)
 
         if update_metadata:
             self.update_metadata()  # upate metadata
@@ -1136,7 +1114,6 @@ class TSloader:
         """
         if self.permission != "overwrite":
             raise ValueError("To remove an ID, you need 'overwrite' permission.")
-
         elif ID not in self.df.index:
             raise ValueError("ID does not exsist and trying to remove it.")
 
@@ -1208,7 +1185,6 @@ class LoaderTSdf(TSloader):
             Default is to use the whole split.
         subsplit_pattern_index (np.ndarray , optional): The indices to use in subsplit.
             Default is to use all the indices from the split.
-        parallel (bool, optional): Sets attribute of the same name.
         permission (str, optional): Sets attribute of the same name.
 
     Attributes:
@@ -1226,9 +1202,6 @@ class LoaderTSdf(TSloader):
         subsplit_pattern_index (np.narray , optional): The indices to
             use as subsplit_pattern. Default is to use all the indices
             from the split.
-        parallel (bool): Parallel informn on how to manipulate metadata.
-            Parallel must be set to True to use in parallel to be used in
-            parallel. Default is False.
         permission (str): To choose between {'read', 'write', 'overwerite'},
             with an increasing level of permission for the loader. The options are :
 
@@ -1259,10 +1232,7 @@ class LoaderTSdf(TSloader):
 class LoaderTSdfCSV(LoaderTSdf):
     def get_filename(self, for_metadata: bool = False) -> str:
         if for_metadata:
-            filename = "metadata"
-            if self.parallel:
-                filename += "-" + self.datatype + "-" + self.current_split
-            filename += ".csv"
+            filename = "metadata.csv"
             return self._append_path(filename)
 
         filename = self.datatype + "-" + self.current_split + ".csv"
@@ -1350,7 +1320,7 @@ class LoadersProcess:
 
 
     Need to respect:
-    - n_procs + n_loaders <= n threads
+    - n_jobs + n_input_loaders <= n threads
 
     Args:
         loaders (TSLoader): Sets attribute of the same name.
@@ -1361,8 +1331,12 @@ class LoadersProcess:
             multiprocessing.
         df_function Callable[["TSloader"], None]): A function to apply to every a df
             every loaders.
-        loader_function Callable[["TSloader"], None]): A function to
-            apply to every split_pattern of every loaders.
+        process_df Callable[["TSloader"], None]): How to process the DataFrame of every
+        loader, ID-wise.
+        df of every loaders.
+        process_split Callable[["TSloader"], None]): How to process the loader for every
+        split.
+
 
     """
 
@@ -1370,148 +1344,72 @@ class LoadersProcess:
     output_path: str
     datatype: str
     output_datatype: str
-    n_procs: int
-    n_loaders: int
+    n_jobs: int
+    n_input_loaders: int
     IDs: np.ndarray
-    loader_function: Callable[["TSloader"], None]
-    df_function_parallel: Callable[[TSloader, np.ndarray], None]
-    loaders: list["TSloader"]
+    process_split: Optional[Callable[[TSloader], None]]
+    process_df: Callable[[pd.DataFrame], pd.DataFrame]
+    input_loaders: list["TSloader"]
     autoload: bool
-    parallel: bool
 
     def __init__(
         self,
-        data_path: str = "data/",
-        output_path: Optional[str] = None,
+        data_path: Optional[str] = None,
         datatype: Optional[str] = None,
-        output_datatype: Optional[str] = None,
-        n_procs: int = 1,
-        n_loaders: int = 1,
         IDs: Optional[np.ndarray] = None,
         subsplit_pattern: Optional[np.ndarray] = None,
-        loader_function: Optional[Callable[["TSloader"], None]] = None,
-        df_function: Optional[Callable[[pd.DataFrame, TSloader], None]] = None,
-        loaders: Optional[list["TSloader"]] = None,
         autoload: bool = True,
-        parallel: bool = True,
+        input_loaders: Optional[list["TSloader"]] = None,
+        output_loader: Optional["TSloader"] = None,
+        n_input_loaders: int = 1,
+        n_jobs: int = 1,
+        process_split: Optional[Callable[["TSloader"], None]] = None,
+        process_df: Optional[Callable[[pd.DataFrame], pd.DataFrame]] = None,
     ) -> None:
+        if process_df is None:
+
+            def process_df_default(df: pd.DataFrame) -> pd.DataFrame:
+                return df
+
+            process_df = process_df_default
+
         """Init method."""
-        if loader_function is None:
+        self.n_jobs = n_jobs
+        self.process_split = process_split
+        self.process_df = process_df
 
-            def default_loader_function(_loader: "TSloader") -> None:
-                return None
-
-            loader_function = default_loader_function
-
-        if df_function is None:
-
-            def default_df_function(
-                _df: pd.DataFrame, _output_loader: TSloader
-            ) -> None:
-                return None
-
-            df_function = default_df_function
-
-        def df_function_parallel(input_loader: "TSloader", IDs: np.ndarray) -> None:
-            split = input_loader.current_split + "_" + "".join(IDs)
-            output_loader = LoaderTSdf(
-                path=self.output_path,
-                datatype=self.output_datatype,
-                split_pattern=split,
-                parallel=self.parallel,
-                # autoload=False,
-            )
-            df_function(input_loader.get_df(IDs=IDs), output_loader)
-
-        def df_ID_function(input_loader: "TSloader") -> None:
-            for split in input_loader.subsplit_pattern:
-                input_loader.set_current_split(split)
-                # run df_function in parallel with the available n_procs
-                if self.parallel:
-                    Parallel(n_jobs=self.n_procs)(
-                        delayed(df_function_parallel)(input_loader, IDs)
-                        for IDs in self.IDs
-                    )
-                else:
-                    for IDs in self.IDs:
-                        df_function_parallel(input_loader, IDs)
-
-        self.n_procs = n_procs
-        self.loader_function = loader_function
-        self.df_ID_function = df_ID_function
-        self.autoload = autoload
-        self.parallel = parallel
-
-        self.set_loaders(
+        self.set_input_loaders(
+            input_loaders=input_loaders,
             data_path=data_path,
             datatype=datatype,
             subsplit_pattern=subsplit_pattern,
-            n_loaders=n_loaders,
-            loaders=loaders,
+            n_input_loaders=n_input_loaders,
+            autoload=autoload,
         )
 
-        # get atttributes from loaders
-        self.datatype = self.loaders[0].datatype
-        self.data_path = self.loaders[0].path
+        self.set_output_loader(
+            output_loader=output_loader,
+            output_path=self.input_loaders[0].path,
+            output_datatype=self.input_loaders[0].datatype,
+            subsplit_pattern=subsplit_pattern,
+        )
 
+        IDs_from_loader = self.input_loaders[0].get_IDs()
         if IDs is None:
-            IDs = self.loaders[0].get_IDs()
-        self.IDs = IDs
-
-        if output_path is None:
-            output_path = self.data_path
-        self.output_path = output_path
-
-        if output_datatype is None:
-            output_datatype = self.datatype
-        self.output_datatype = output_datatype
-
-    def run_IDs(self, merge_data: bool = False) -> None:
-        """For every ID, apply `df_function` attribute optionally in parallel.
-
-        Careful : If merge is not use, metadata.pqt will not be
-        updated. This could lead to further errors if used incorectly.
-        """
-        if self.parallel:
-            Parallel(n_jobs=len(self.loaders))(
-                delayed(self.df_ID_function)(loader) for loader in self.loaders
-            )
+            self.IDs = IDs_from_loader
         else:
-            for loader in self.loaders:
-                self.df_ID_function(loader)
+            self.IDs = np.intersect1d(IDs, IDs_from_loader)
 
-        if merge_data:
-            output_loader = LoaderTSdf(
-                path=self.output_path,
-                datatype=self.output_datatype,
-                autoload=True,  # to merge, you need to load data from file
-            )
-            output_loader.merge_splitted_metadata(rm=True)
-            LoaderTSdf.merge_splitted_data(output_loader, len(self.loaders))
-
-    def run_loader(self) -> None:
-        def loaders_split_function(loader: "TSloader") -> None:
-            for split in loader.subsplit_pattern:
-                loader.set_current_split(split)
-                self.loader_function(loader)
-
-        if self.parallel:
-            Parallel(n_jobs=len(self.loaders))(
-                delayed(loaders_split_function)(loader) for loader in self.loaders
-            )
-        else:
-            for loader in self.loaders:
-                loaders_split_function(loader)
-
-    def set_loaders(
+    def set_input_loaders(
         self,
-        data_path: str = "data/",
+        input_loaders: Optional[list["TSloader"]] = None,
+        data_path: Optional[str] = None,
         datatype: Optional[str] = None,
         subsplit_pattern: Optional[np.ndarray] = None,
-        n_loaders: int = 1,
-        loaders: Optional[list["TSloader"]] = None,
+        n_input_loaders: int = 1,
+        autoload: bool = False,
     ) -> None:
-        if loaders is None:
+        if input_loaders is None:
             if data_path is None:
                 raise ValueError("Need data_path")
             metadata_loader = LoaderTSdf(path=data_path, datatype=datatype)
@@ -1522,69 +1420,92 @@ class LoadersProcess:
 
             if last_split_index == 0:
                 raise ValueError("split_pattern not defined.")
-            if n_loaders > last_split_index:
-                raise ValueError("n_loaders greater than length of subsplit pattern.")
-
-            loaders = []
-            for i in range(n_loaders - 1):
-                subsplit_index = slice(
-                    *[last_split_index // n_loaders * j for j in [i, i + 1]]
+            if n_input_loaders > last_split_index:
+                raise ValueError(
+                    "n_input_loaders greater than length of subsplit pattern."
                 )
-                loader = LoaderTSdf(
+
+            input_loaders = []
+            for i in range(n_input_loaders - 1):
+                subsplit_index = slice(
+                    *[last_split_index // n_input_loaders * j for j in [i, i + 1]]
+                )
+                input_loader = LoaderTSdf(
                     path=data_path,
                     datatype=datatype,
                     subsplit_pattern=subsplit_pattern[subsplit_index],
-                    autoload=self.autoload,
+                    autoload=autoload,
                 )
-                loaders.append(loader)
-            # i == n_loaders
+                input_loaders.append(input_loader)
+            # i == n_input_input_loaders
             subsplit_index = slice(
-                last_split_index // n_loaders * (n_loaders - 1), last_split_index
+                last_split_index // n_input_loaders * (n_input_loaders - 1),
+                last_split_index,
             )
-            loader = LoaderTSdf(
+            input_loader = LoaderTSdf(
                 path=data_path,
                 datatype=datatype,
                 subsplit_pattern=subsplit_pattern[subsplit_index],
-                autoload=self.autoload,
+                autoload=autoload,
             )
-            loaders.append(loader)
+            input_loaders.append(input_loader)
+        self.input_loaders = input_loaders
 
-        self.loaders = loaders
+    def set_output_loader(
+        self,
+        output_loader,
+        output_path: str,
+        output_datatype,
+        subsplit_pattern,
+    ):
+        if output_loader is None:
+            output_loader = LoaderTSdf(
+                path=output_path,
+                datatype=output_datatype,
+                split_pattern=subsplit_pattern,
+            )
+        self.output_loader = output_loader
 
+    def process_loader_ID(self, input_loader: TSloader, ID: np.ndarray) -> pd.DataFrame:
+        """Single fix loader and single fix ID to process.
 
-# This function is DataFormat but needs TSdf. Needs refactoring
-def convert_from_TSdf(
-    df: Optional[pd.DataFrame] = None, tstype: Type[Data] = pd.DataFrame
-) -> Data:
-    if df is None or df.size == 0:
-        df = pd.DataFrame()
-        arr = np.array([])
-        if isinstance(arr, tstype):  # np.ndarray
-            return arr
-    if isinstance(df, tstype):  # pd.DataFrame
-        return df
+        Helper method to be called in parallel with a list of IDs and
+        a fix input_loader.
+        """
+        return self.process_df(input_loader.get_df(IDs=ID))
 
-    dim_label = df.index.get_level_values("dim").unique()
-    features = df.columns
-    if len(features) == 1 and len(dim_label) == 1:  # ndim == 1
-        arr = df.to_numpy()[:]
-        if isinstance(arr, tstype):  # np.ndarray
-            return arr
+    def process_loader(self, input_loader: "TSloader", write=True) -> None:
+        """Single loader to process split-wise and ID-wise.
 
-    timestamps = df.index.get_level_values("timestamp").unique()
-    if len(features) == 1:  # ndim == 2
-        # ndim == 2
-        arr = np.zeros((len(timestamps), len(dim_label)))
-        for j in range(len(dim_label)):
-            arr[:, j] = df.loc[:, :, dim_label[j]].to_numpy()[:, 0]
+        Helper method to be called in parallel with a list of input_loaders.
+        """
+        with Parallel(n_jobs=self.n_jobs) as parallel:
+            for split in input_loader.subsplit_pattern:
+                input_loader.set_current_split(split)
+                self.output_loader.set_current_split(split)
+                if self.process_split is not None:
+                    self.process_split(input_loader)
+                # run df_function in parallel with the available n_jobs
+                processed_data_ID = list(
+                    parallel(
+                        delayed(self.process_loader_ID)(input_loader, IDs)
+                        for IDs in self.IDs
+                    )
+                )
+                # merge outputs
+                self.output_loader.set_df(
+                    pd.concat(processed_data_ID, axis=0),  # type: ignore
+                    update_metadata=False,
+                )
+                if write:
+                    self.output_loader.write(write_metadata=False)
+            if write:
+                self.output_loader.update_metadata_from_dataset()
 
-        if isinstance(arr, tstype):  # np.ndarray
-            return arr
-    else:  # len(features) >= 2: i.e. ndim == 3
-        arr = np.zeros((len(timestamps), len(dim_label), len(features)))
-        for k in range(len(features)):
-            for j in range(len(dim_label)):
-                arr[:, j, k] = df.loc[:, :, dim_label[j]][features[k]].to_numpy()
-        if isinstance(arr, tstype):  # np.ndarray
-            return arr
-    raise ValueError("Not a valid timeseries datatype")
+    def run_process(self, write=True) -> None:
+        """For every ID, apply `df_function` attribute in parallel."""
+        with Parallel(n_jobs=len(self.input_loaders)) as parallel:
+            parallel(
+                delayed(self.process_loader)(loader, write=write)
+                for loader in self.input_loaders
+            )

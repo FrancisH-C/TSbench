@@ -59,7 +59,10 @@ def test_get_timestamp():
     timestamps = np.array(list(map(str, np.arange(10))))
 
     loader = simple_loader()
-    assert (loader.get_timestamp() == timestamps).all()
-    assert (loader.get_timestamp(start="2") == timestamps[2:]).all()
-    assert (loader.get_timestamp(end="2") == timestamps[:2]).all()
-    assert (loader.get_timestamp(start="1", end="2") == timestamps[1:2]).all()
+    assert (loader.get_timestamp() == np.repeat(np.array(timestamps), 2)).all()
+    assert (loader.get_timestamp(unique=True) == timestamps).all()
+    assert (loader.get_timestamp(start="2", unique=True) == timestamps[2:]).all()
+    assert (loader.get_timestamp(end="2", unique=True) == timestamps[:2]).all()
+    assert (
+        loader.get_timestamp(start="1", end="2", unique=True) == timestamps[1:2]
+    ).all()
