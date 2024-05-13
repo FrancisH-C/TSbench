@@ -1,6 +1,8 @@
 #!/usr/env python
 """
 Install required R packages assuming the dependencies are met.
+
+Probably doesn't work for a specific user setup.
 """
 
 import importlib.util
