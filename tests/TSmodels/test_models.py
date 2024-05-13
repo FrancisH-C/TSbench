@@ -323,5 +323,5 @@ def test_Rgarch():
     garch_model = TSmodels.GARCH(lag=lag, rg=rg)
     timeseries = garch_model.generate(N=N)
     rgarch_model = TSmodels.rGARCH(lag=lag, rg=rg)
-    rgarch_model.set_data(data=timeseries)
+    rgarch_model.set_data(data=timeseries["returns"].to_numpy())
     timeseries = rgarch_model.forecast(T=T)
