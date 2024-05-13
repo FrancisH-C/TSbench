@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Untested.""
+"""Untested."""
 
 import argparse
 import subprocess
