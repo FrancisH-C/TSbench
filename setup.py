@@ -42,7 +42,7 @@ extras_require["R"] = ["rpy2[all]"]
 
 extras_require["all"] = list(set(x for lst in extras_require.values() for x in lst))
 
-VERSION = "0.1.2"
+VERSION = "0.1.4"
 setup(
     name="TSbench",
     version=VERSION,
