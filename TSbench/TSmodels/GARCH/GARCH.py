@@ -94,9 +94,9 @@ class GARCH(GeneratorModel):
     def set_feature_label(self, feature_label: Optional[list[str]] = None) -> None:
         if feature_label is None:
             if self.dim > 1:
-                feature_label = ["retuns"] + ["vol" + str(i) for i in range(self.dim)]
+                feature_label = ["returns"] + ["vol" + str(i) for i in range(self.dim)]
             else:
-                feature_label = ["retuns"] + ["vol"]
+                feature_label = ["returns"] + ["vol"]
         if len(feature_label) != self.dim + 1:
             raise ValueError("Need 'feature_label' with `self.dim + 1` entries")
         self.feature_label = np.array(feature_label)
