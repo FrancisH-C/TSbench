@@ -8,9 +8,11 @@
 
 from __future__ import annotations
 
+import pandas as pd
 import os
 import shutil
 from typing import Any
+
 
 from TSbench.TSdata.TSloader import LoaderTSdf
 
@@ -63,3 +65,49 @@ def merge_dataset(
 
     merge_loader.merge_splitted_metadata(write_metadata=True, rm=True)
     return merge_loader
+
+
+class InitializeCSV:
+    """Dataset initial format from CSV format."""
+
+    def __init__(
+        self,
+        datatype,
+        original_path,
+        processed_path,
+        process_df,
+        split_from_filename,
+        test=False,
+    ):
+        self.datatype = datatype
+        self.original_path = original_path
+        self.processed_path = processed_path
+        self.process_df = process_df
+        self.split_from_filename = split_from_filename
+        self.test = test
+
+    def initialize(self):
+        files = os.listdir(self.original_path)
+        loader = LoaderTSdf(path=self.processed_path, datatype=self.datatype)
+
+        for filename in files:
+            df = pd.read_csv(os.path.join(self.original_path, filename))
+
+            # process DataFrame to TSdf-compatible format
+            df = self.process_df(df)
+
+            # set current_split
+            loader.set_current_split(self.split_from_filename(filename))
+
+            # set loader to df
+            loader.add_data(df)
+
+            if self.test:
+                print(loader.current_split)
+                print(loader.df.columns)
+                print(loader.df)
+                print(loader.metadata)
+                break
+            else:
+                loader.write()
+        loader.update_metadata_from_dataset()

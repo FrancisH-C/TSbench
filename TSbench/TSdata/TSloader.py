@@ -36,12 +36,12 @@ class TSloader:
         autoload: bool = True,
     ) -> None:
         """Init method."""
-        if split_pattern is None:
-            split_pattern = np.array([])
-        if subsplit_pattern is None:
-            subsplit_pattern = np.array([])
-        if subsplit_pattern_index is None:
-            subsplit_pattern_index = np.array([])
+        # if split_pattern is None:
+        #     split_pattern = np.array(["1"])
+        # if subsplit_pattern is None:
+        #     subsplit_pattern = np.array([])
+        # if subsplit_pattern_index is None:
+        #     subsplit_pattern_index = np.array([])
         if datatype is None:
             raise ValueError("Give a datatype.")
 
@@ -55,6 +55,16 @@ class TSloader:
         # Initialize metadata
         self.load_metadata()
 
+        ## Set data
+        self.set_data(datatype, split_pattern, subsplit_pattern, subsplit_pattern_index)
+
+    def set_data(
+        self,
+        datatype: str,
+        split_pattern: Optional[np.ndarray] = None,
+        subsplit_pattern: Optional[np.ndarray] = None,
+        subsplit_pattern_index: Optional[np.ndarray] = None,
+    ):
         ## Set the datatype
         self.set_datatype(
             datatype, split_pattern, subsplit_pattern, subsplit_pattern_index
@@ -280,15 +290,14 @@ class TSloader:
             ValueError: If split_pattern exists and no overwrite permission is granted.
 
         """
-        if split_pattern is None:
-            split_pattern = np.array([])
-
-        # if split_pattern is empty
-        if np.size(split_pattern) == 0:
+        # if split_pattern is None or empty
+        if split_pattern is None or np.size(split_pattern) == 0:
             if np.size(self.metadata.at[self.datatype, "split_pattern"]) != 0:
                 # split pattern already defined in metadata, do nothing
                 return
-            split_pattern = np.array([])
+            # Give it the default value
+            split_pattern = np.array(["1"])
+        # update split_pattern
         self.set_metadata(split_pattern=split_pattern)
 
     def set_metadata(self, **metadata: list | np.ndarray) -> None:
@@ -339,16 +348,37 @@ class TSloader:
 
     def update_metadata_from_dataset(self) -> None:
         """Update metadata using dataset."""
-        for datatype in self.list_datatypes():
-            self.set_datatype(datatype)
+        # for datatype in self.list_datatypes():
+        #     self.set_datatype(datatype)
 
-            self.update_split_pattern_from_dataset()
-            self.df = self.load()
+        self.update_split_pattern_from_dataset()
+        self.df = self.load()
 
-            self.update_metadata()
+        self.update_metadata()
 
         if not self.metadata.empty:
             self.write_metadata()
+
+    def create_metadata_from_dataset(self, datatypes) -> None:
+        """Update metadata using dataset."""
+
+        self_datatype = self.datatype
+
+        for datatype in datatypes:
+            split_pattern = []
+            for filename in os.listdir(self.path):
+                if datatype in filename:
+                    split_pattern.append(filename[len(datatype) + 1 : -4])
+                # self.set_datatype(datatype, split_pattern)
+                # self.df = self.load()
+                # self.update_metadata()
+
+            split_pattern.sort()
+            self.set_datatype(datatype, split_pattern)
+            self.df = self.load()
+            self.update_metadata()
+        self.write_metadata()
+        self.set_data(self_datatype)
 
     def append_to_metadata(self, **metadata: list | np.ndarray) -> None:
         """Verify if entry is already there before append.
@@ -576,34 +606,6 @@ class TSloader:
         test = self.get_df(start_index=split_index + 1)
         return train, test
 
-    def get_df(
-        self,
-        start: Optional[int | str] = None,
-        start_index: Optional[int] = None,
-        end: Optional[int | str] = None,
-        end_index: Optional[int] = None,
-        IDs: Optional[np.ndarray | str] = None,
-        timestamps: Optional[np.ndarray] = None,
-        dims: Optional[np.ndarray] = None,
-        features: Optional[np.ndarray] = None,
-    ) -> pd.DataFrame:
-        """Alias for get_timeseries
-
-        Use get_timeseries instead. About to be deprecated.
-        """
-        if isinstance(IDs, str):
-            IDs = np.array([IDs])
-        return self.get_timeseries(
-            start=start,
-            start_index=start_index,
-            end=end,
-            end_index=end_index,
-            IDs=IDs,
-            timestamps=timestamps,
-            dims=dims,
-            features=features,
-        )
-
     def get_timestamp(
         self,
         start: Optional[int | str] = None,
@@ -632,9 +634,10 @@ class TSloader:
         if unique:
             timestamps = np.unique(timestamps)
 
+        # Assuming sorted timestamps
         # If len(IDs) == 1, timestamps is sorted; else,
-        if isinstance(IDs, slice) or len(IDs) != 1:
-            timestamps = np.sort(timestamps)
+        # if isinstance(IDs, slice) or len(IDs) != 1:
+        #     timestamps = np.sort(timestamps)
 
         if start is not None:
             start_index = int(np.searchsorted(timestamps, start))
@@ -643,6 +646,60 @@ class TSloader:
             end_index = int(np.searchsorted(timestamps, end))
 
         return timestamps[start_index:end_index]
+
+    def filter_df(
+        self,
+        start: Optional[int | str] = None,
+        start_index: Optional[int] = None,
+        end: Optional[int | str] = None,
+        end_index: Optional[int] = None,
+        IDs: Optional[np.ndarray | str] = None,
+        timestamps: Optional[np.ndarray] = None,
+        dims: Optional[np.ndarray] = None,
+        features: Optional[np.ndarray] = None,
+    ) -> pd.DataFrame:
+        if isinstance(IDs, str):
+            IDs = np.array([IDs])
+        df = self.get_df(
+            start=start,
+            start_index=start_index,
+            end=end,
+            end_index=end_index,
+            IDs=IDs,
+            timestamps=timestamps,
+            dims=dims,
+            features=features,
+        )
+        self.set_df(df)
+        return self
+
+    def get_df(
+        self,
+        start: Optional[int | str] = None,
+        start_index: Optional[int] = None,
+        end: Optional[int | str] = None,
+        end_index: Optional[int] = None,
+        IDs: Optional[np.ndarray | str] = None,
+        timestamps: Optional[np.ndarray] = None,
+        dims: Optional[np.ndarray] = None,
+        features: Optional[np.ndarray] = None,
+    ) -> pd.DataFrame:
+        """Alias for get_timeseries
+
+        Use get_timeseries instead. About to be deprecated.
+        """
+        if isinstance(IDs, str):
+            IDs = np.array([IDs])
+        return self.get_timeseries(
+            start=start,
+            start_index=start_index,
+            end=end,
+            end_index=end_index,
+            IDs=IDs,
+            timestamps=timestamps,
+            dims=dims,
+            features=features,
+        )
 
     def get_timeseries(
         self,
@@ -690,35 +747,27 @@ class TSloader:
         if features is None:
             features = slice(None)
 
-        return convert_from_TSdf(self.df.loc[IDs, timestamps, dims][features], tstype)
         # What follows does
         # self.df.loc[IDs, timestamps, dims][features]
-        # much more quickly but create a lot of DataFrames (using copy)
-        # if IDs is None:
-        #     IDs = slice(None)
-        # if dims is None:
-        #     dims = slice(None)
-        # if features is None:
-        #     features = slice(None)
+        # much more quickly (orders of magnitudes) but it creates a lot of DataFrames (using copy)
 
         # # keep index information in columns
-        # df = self.df
-        # df = df.reset_index(drop=False)
-        # df.set_index(["ID", "timestamp", "dim"], drop=False, inplace=True)
+        df = self.df.reset_index(drop=False)
+        df.set_index(["ID", "timestamp", "dim"], drop=False, inplace=True)
 
         # # fix and drop ID index
-        # df = df.loc[IDs]
-        # df = df.droplevel("ID")
-        # # fix and drop timestamps
-        # df = df.loc[timestamps]
-        # df = df.droplevel("timestamp")
-        # # fix dims, no need to drop
-        # df = df.loc[dims]
+        df = df.loc[IDs]
+        df = df.droplevel("ID")
+        # fix and drop timestamps
+        df = df.loc[timestamps]
+        df = df.droplevel("timestamp")
+        # fix dims, no need to drop
+        df = df.loc[dims]
 
-        # # set index back
-        # df.set_index(["ID", "timestamp", "dim"], drop=True, inplace=True)
+        # set index back
+        df.set_index(["ID", "timestamp", "dim"], drop=True, inplace=True)
 
-        # return convert_from_TSdf(df[features], tstype)
+        return convert_from_TSdf(df[features], tstype)
 
     def concat_subsplit_pattern(self):
         df = pd.DataFrame(
@@ -921,7 +970,9 @@ class TSloader:
             # upate metadata
             self.update_metadata()
 
-    def rm_datatype(self, rm_from_metadata: bool = True) -> None:
+    def rm_datatype(
+        self, rm_from_memory=True, rm_from_metadata: bool = True, rm_from_dataset=True
+    ) -> None:
         """Remove datatatype's data.
 
         Args:
@@ -933,18 +984,26 @@ class TSloader:
                 `new_path`.
 
         """
-        if self.permission != "overwrite":
-            raise ValueError("To remove a datatype, you need 'overwrite' permission")
-        elif self.df.empty:
-            raise ValueError("Trying to remove nonexistent datatype.")
-        self.df = pd.DataFrame(
-            index=pd.MultiIndex.from_arrays(
-                [[], [], []], names=("ID", "timestamp", "dim")
+        if rm_from_memory:
+            if self.permission != "overwrite":
+                raise ValueError(
+                    "To remove a datatype, you need 'overwrite' permission"
+                )
+            elif self.df.empty:
+                raise ValueError("Trying to remove nonexistent datatype.")
+            self.df = pd.DataFrame(
+                index=pd.MultiIndex.from_arrays(
+                    [[], [], []], names=("ID", "timestamp", "dim")
+                )
             )
-        )
 
         if rm_from_metadata:
             self.metadata.drop(self.datatype, inplace=True)
+
+        if rm_from_dataset:
+            filename = self.get_filename()
+            if os.path.exists(filename):
+                os.remove(filename)
 
     def get_IDs(self, from_metadata=False) -> np.ndarray:
         if from_metadata:
@@ -1257,8 +1316,16 @@ class LoaderTSdfCSV(LoaderTSdf):
                         # parse string
                         arr = re.sub(pattern=" ", repl=",", string=arr)
                         arr = np.array(ast.literal_eval(arr))
-                        # change value to np.ndarray
+
+                        # change arr (of type str) in metadata into np.ndarray
                         self.metadata.at[index, column] = arr
+
+                        # if ndim and length is 1, pandas reduce it to dim to 0.
+                        # This brings it back as it is suppose to be: ndim == 1.
+                        if arr.ndim == 1 and len(arr) == 1:
+                            self.metadata = self.metadata.map(
+                                lambda arr: np.array(arr, ndmin=1)
+                            )
         else:
             self.metadata = pd.DataFrame(
                 columns=pd.Index(["IDs", "features", "split_pattern"]),
@@ -1318,7 +1385,6 @@ class LoaderTSdfCSV(LoaderTSdf):
 class LoadersProcess:
     """A collection of loaders and a function to apply to them using multiprocessing.
 
-
     Need to respect:
     - n_jobs + n_input_loaders <= n threads
 
@@ -1363,16 +1429,9 @@ class LoadersProcess:
         output_loader: Optional["TSloader"] = None,
         n_input_loaders: int = 1,
         n_jobs: int = 1,
-        process_split: Optional[Callable[["TSloader"], None]] = None,
+        process_split: Optional[Callable[["TSloader", "TSloader"], None]] = None,
         process_df: Optional[Callable[[pd.DataFrame], pd.DataFrame]] = None,
     ) -> None:
-        if process_df is None:
-
-            def process_df_default(df: pd.DataFrame) -> pd.DataFrame:
-                return df
-
-            process_df = process_df_default
-
         """Init method."""
         self.n_jobs = n_jobs
         self.process_split = process_split
@@ -1393,7 +1452,9 @@ class LoadersProcess:
             output_datatype=self.input_loaders[0].datatype,
             subsplit_pattern=subsplit_pattern,
         )
+        self.set_IDs(IDs=IDs)
 
+    def set_IDs(self, IDs=None):
         IDs_from_loader = self.input_loaders[0].get_IDs()
         if IDs is None:
             self.IDs = IDs_from_loader
@@ -1484,23 +1545,29 @@ class LoadersProcess:
                 input_loader.set_current_split(split)
                 self.output_loader.set_current_split(split)
                 if self.process_split is not None:
-                    self.process_split(input_loader)
+                    self.process_split(input_loader, self.output_loader)
                 # run df_function in parallel with the available n_jobs
-                processed_data_ID = list(
-                    parallel(
-                        delayed(self.process_loader_ID)(input_loader, IDs)
-                        for IDs in self.IDs
+                if self.process_df is not None:
+                    processed_data_ID = list(
+                        parallel(
+                            delayed(self.process_loader_ID)(input_loader, IDs)
+                            for IDs in self.IDs
+                        )
                     )
-                )
-                # merge outputs
-                self.output_loader.set_df(
-                    pd.concat(processed_data_ID, axis=0),  # type: ignore
-                    update_metadata=False,
-                )
+                    # merge outputs
+                    self.output_loader.set_df(
+                        pd.concat(processed_data_ID, axis=0),  # type: ignore
+                        update_metadata=False,
+                    )
                 if write:
                     self.output_loader.write(write_metadata=False)
             if write:
                 self.output_loader.update_metadata_from_dataset()
+
+    def reload(self, IDs=None):
+        for loader in self.input_loaders:
+            loader.load()
+        self.set_IDs(IDs=IDs)
 
     def run_process(self, write=True) -> None:
         """For every ID, apply `df_function` attribute in parallel."""
