@@ -450,3 +450,52 @@ class Model(GeneratorModel, ForecastingModel):
     def __init__(self, **model_args) -> None:
         """Initialize Model."""
         super().__init__(**model_args)
+
+
+# class ModelsProcess:
+#    def __init__(
+#        self,
+#        models
+#        output_loader: Optional["TSloader"] = None,
+#        n_jobs: int = 1,
+#    ) -> None:
+#        self.models = models
+#        self.n_jobs = n_jobs
+#
+#    model_process = LoadersProcess(
+#        data_path=data_path,
+#        datatype=datatype,
+#        output_loader=generate_output,
+#        n_jobs=n_jobs,
+#        n_input_loaders=n_input_loaders,
+#        autoload=True,
+#    )
+#
+#    @staticmethod
+#    def set_generate_model(model, parameters):
+#        def generate_model(df):
+#            print("jjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjj")
+#            output_loader = LoaderTSdf(path="", datatype="tmp")
+#            # model.set_data(df)
+#            model.generate(**parameters)
+#            # print(model.generate(**parameters))
+#
+#            return model.loader.df
+#
+#        return generate_model
+#
+
+#     @staticmethod
+#     def set_generate_models(models, parameters):
+#         def generate_models(df):
+#             print("jjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjjj")
+#             output_loader = LoaderTSdf(path="", datatype="tmp")
+#             for model in models:
+#                 # model.set_data(df)
+#                 model.generate(**parameters)
+#                 # print(model.generate(**parameters))
+#                 model.register_data(output_loader)
+#
+#             return output_loader.df
+#
+#         return generate_models

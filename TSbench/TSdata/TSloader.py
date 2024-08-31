@@ -657,6 +657,7 @@ class TSloader:
         timestamps: Optional[np.ndarray] = None,
         dims: Optional[np.ndarray] = None,
         features: Optional[np.ndarray] = None,
+        keep_unique=False,
     ) -> pd.DataFrame:
         if isinstance(IDs, str):
             IDs = np.array([IDs])
@@ -669,6 +670,7 @@ class TSloader:
             timestamps=timestamps,
             dims=dims,
             features=features,
+            keep_unique=False,
         )
         self.set_df(df)
         return self
@@ -683,6 +685,7 @@ class TSloader:
         timestamps: Optional[np.ndarray] = None,
         dims: Optional[np.ndarray] = None,
         features: Optional[np.ndarray] = None,
+        keep_unique=False,
     ) -> pd.DataFrame:
         """Alias for get_timeseries
 
@@ -699,6 +702,7 @@ class TSloader:
             timestamps=timestamps,
             dims=dims,
             features=features,
+            keep_unique=False,
         )
 
     def get_timeseries(
@@ -711,6 +715,7 @@ class TSloader:
         timestamps: Optional[slice | np.ndarray] = None,
         dims: Optional[slice | np.ndarray] = None,
         features: Optional[slice | np.ndarray] = None,
+        keep_unique=False,
         tstype: Type[Data] = pd.DataFrame,
     ) -> Data:
         """Get DataFrame for the datatype.
@@ -747,27 +752,35 @@ class TSloader:
         if features is None:
             features = slice(None)
 
+        if keep_unique:
+            df = self.df.loc[IDs, timestamps, dims][features]
+            df = df.loc[~df.index.duplicated(keep="first")]
+            return convert_from_TSdf(df)
+        else:
+            return convert_from_TSdf(self.df.loc[IDs, timestamps, dims][features])
         # What follows does
         # self.df.loc[IDs, timestamps, dims][features]
-        # much more quickly (orders of magnitudes) but it creates a lot of DataFrames (using copy)
+        # much more quickly (orders of magnitudes) but it creates a lot of DataFrames (using copy) which takes up a lot of memory.
 
-        # # keep index information in columns
-        df = self.df.reset_index(drop=False)
-        df.set_index(["ID", "timestamp", "dim"], drop=False, inplace=True)
+        # # # keep index information in columns
+        # df = self.df.copy()
 
-        # # fix and drop ID index
-        df = df.loc[IDs]
-        df = df.droplevel("ID")
-        # fix and drop timestamps
-        df = df.loc[timestamps]
-        df = df.droplevel("timestamp")
-        # fix dims, no need to drop
-        df = df.loc[dims]
+        # df.reset_index(drop=False, inplace=True)
+        # df.set_index(["ID", "timestamp", "dim"], drop=False, inplace=True)
 
-        # set index back
-        df.set_index(["ID", "timestamp", "dim"], drop=True, inplace=True)
+        # # # fix and drop ID index
+        # df = df.loc[IDs]
+        # df = df.droplevel("ID")
+        # # fix and drop timestamps
+        # df = df.loc[timestamps]
+        # df = df.droplevel("timestamp")
+        # # fix dims, no need to drop
+        # df = df.loc[dims]
 
-        return convert_from_TSdf(df[features], tstype)
+        # # set index back
+        # df.set_index(["ID", "timestamp", "dim"], drop=True, inplace=True)
+
+        # return convert_from_TSdf(df[features], tstype)
 
     def concat_subsplit_pattern(self):
         df = pd.DataFrame(
@@ -1080,13 +1093,10 @@ class TSloader:
         else:
             raise ValueError("data must either be a DataFrame or be formated.")
 
-        if collision == "update" and self.permission == "overwrite":
-            self.df = df.combine_first(self.df)
-            self.update_metadata()  # upate metadata
-            return
-
         if ID in self.df.index:
-            if collision == "ignore":
+            if collision == "update" and self.permission == "overwrite":
+                self.df = df.combine_first(self.df)
+            elif collision == "ignore":
                 return
             elif collision == "overwrite" and self.permission == "overwrite":
                 if len(self.get_IDs()) == 1:
@@ -1102,8 +1112,6 @@ class TSloader:
                 )
         else:
             # Append the ID to `self.df`.
-            # self.df = df.combine_first(self.df)
-            # faster?
             self.df = pd.concat([self.df, df], axis=0)
 
         if update_metadata:
@@ -1383,7 +1391,11 @@ class LoaderTSdfCSV(LoaderTSdf):
 
 
 class LoadersProcess:
-    """A collection of loaders and a function to apply to them using multiprocessing.
+    """
+    # Big modification : now self.process_df takes loader as input and outputs df.
+    # Hence, it should be called process_ID
+
+    A collection of loaders and a function to apply to them using multiprocessing.
 
     Need to respect:
     - n_jobs + n_input_loaders <= n threads
@@ -1450,7 +1462,7 @@ class LoadersProcess:
             output_loader=output_loader,
             output_path=self.input_loaders[0].path,
             output_datatype=self.input_loaders[0].datatype,
-            subsplit_pattern=subsplit_pattern,
+            subsplit_pattern=self.input_loaders[0].subsplit_pattern,
         )
         self.set_IDs(IDs=IDs)
 
@@ -1510,6 +1522,11 @@ class LoadersProcess:
                 autoload=autoload,
             )
             input_loaders.append(input_loader)
+        if len(input_loaders) != n_input_loaders:
+            raise ValueError(
+                f"Exptected {n_input_loaders} loaders got {len(input_loaders)}"
+            )
+
         self.input_loaders = input_loaders
 
     def set_output_loader(
@@ -1524,45 +1541,52 @@ class LoadersProcess:
                 path=output_path,
                 datatype=output_datatype,
                 split_pattern=subsplit_pattern,
+                autoload=False,
             )
         self.output_loader = output_loader
 
-    def process_loader_ID(self, input_loader: TSloader, ID: np.ndarray) -> pd.DataFrame:
-        """Single fix loader and single fix ID to process.
+    def run_process_df(self, input_loader=None) -> None:
+        def run_process_df_ID(input_loader, ID):
+            """Single fixed loader and single fixed ID to process.
 
-        Helper method to be called in parallel with a list of IDs and
-        a fix input_loader.
-        """
-        return self.process_df(input_loader.get_df(IDs=ID))
+            Helper method to be called in parallel with a list of IDs and
+            a fix input_loader.
+            """
+            return self.process_df(input_loader.get_df(IDs=ID))
+
+        if input_loader is None:
+            input_loader = self.input_loaders[0]
+
+        with Parallel(n_jobs=self.n_jobs) as parallel:
+            processed_data_ID = list(
+                parallel(
+                    delayed(run_process_df_ID)(input_loader, ID) for ID in self.IDs
+                )
+            )
+        # merge outputs
+        self.output_loader.set_df(
+            pd.concat(processed_data_ID, axis=0),  # type: ignore
+            update_metadata=False,
+        )
 
     def process_loader(self, input_loader: "TSloader", write=True) -> None:
         """Single loader to process split-wise and ID-wise.
 
         Helper method to be called in parallel with a list of input_loaders.
         """
-        with Parallel(n_jobs=self.n_jobs) as parallel:
-            for split in input_loader.subsplit_pattern:
-                input_loader.set_current_split(split)
-                self.output_loader.set_current_split(split)
-                if self.process_split is not None:
-                    self.process_split(input_loader, self.output_loader)
-                # run df_function in parallel with the available n_jobs
-                if self.process_df is not None:
-                    processed_data_ID = list(
-                        parallel(
-                            delayed(self.process_loader_ID)(input_loader, IDs)
-                            for IDs in self.IDs
-                        )
-                    )
-                    # merge outputs
-                    self.output_loader.set_df(
-                        pd.concat(processed_data_ID, axis=0),  # type: ignore
-                        update_metadata=False,
-                    )
-                if write:
-                    self.output_loader.write(write_metadata=False)
+        for split in input_loader.subsplit_pattern:
+            input_loader.set_current_split(split)
+            self.output_loader.set_current_split(split)
+            if self.process_split is not None:
+                # run process_split
+                self.process_split(input_loader, self.output_loader)
+            # run process_df
+            if self.process_df is not None:
+                self.run_process_df(input_loader)
             if write:
-                self.output_loader.update_metadata_from_dataset()
+                self.output_loader.write(write_metadata=False)
+        if write:
+            self.output_loader.update_metadata_from_dataset()
 
     def reload(self, IDs=None):
         for loader in self.input_loaders:

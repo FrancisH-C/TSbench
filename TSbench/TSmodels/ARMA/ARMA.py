@@ -117,10 +117,17 @@ class ARMA(Model):
         """
         # initial value
         initial = self.get_data(tstype=np.ndarray)
-        x = np.zeros((N - initial.shape[0], self.dim))
-        if initial.size != 0:
+        # initial is 0
+        if initial.size == 0:
+            x = np.zeros((N, self.dim))
+        elif N > initial.shape[0]:  # and initial.size != 0::
+            # initial is part of the initialization
+            x = np.zeros((N - initial.shape[0], self.dim))
             # add initial to x
             x = np.concatenate((initial, x), axis=0)
+        else:  # initial.shape[0] <= N
+            # initial is all of the initialization
+            x = initial[0:N]
 
         # x is the transpose the feature
         x = np.transpose(x)
