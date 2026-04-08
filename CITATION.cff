@@ -1,0 +1,22 @@
+cff-version: 1.2.0
+title: "TSbench: Time Series Benchmark in Python"
+message: "If you use this software, please cite it using the metadata from this file."
+type: software
+authors:
+  - given-names: Francis
+    family-names: Huot-Chantal
+    affiliation: "Université de Montréal, CIRRELT"
+  - given-names: Fabian
+    family-names: Bastin
+    orcid: "https://orcid.org/0000-0003-1323-6787"
+    affiliation: "Université de Montréal, CIRRELT"
+repository-code: "https://github.com/FrancisH-C/TSbench"
+url: "https://francish-c.github.io/TSbench/"
+license: MIT
+version: 0.1.2
+keywords:
+  - Python
+  - time series
+  - simulation
+  - forecasting
+  - financial mathematics

@@ -1,321 +1,164 @@
-<!-- markdown-toc start -->
-# Table of Contents
+# TSbench
 
-- [Description](#description)
-    - [Demonstration](#demonstration)
-- [Quick Start](#quick-start)
-- [Installation Information](#installation-information)
-    - [Virtual Environment in Python](#virtual-environment-in-python)
-        - [Windows](#windows)
-        - [Linux](#linux)
-        - [Jupyter virtual environments](#jupyter-virtual-environments)
-    - [TSbench and R](#tsbench-and-r)
-        - [Limitation](#limitation)
-        - [Install R](#install-r)
-        - [Install rpy2](#install-rpy2)
-        - [CRAN packages](#cran-packages)
-        - [Remove R from TSbench](#remove-r-from-tsbench)
-    - [Installation Options](#installation-options)
-    - [Troubleshooting for Windows](#troubleshooting-for-windows)
-        - [`PowerShell` `virtualenv` not working](#powershell-virtualenv-not-working)
-        - [Issue with Locale Settings in Windows (French Language)](#issue-with-locale-settings-in-windows-french-language)
-- [Run Tests](#run-tests)
-- [```](#)
+[![Tests](https://github.com/FrancisH-C/TSbench/actions/workflows/python-package.yml/badge.svg)](https://github.com/FrancisH-C/TSbench/actions/workflows/python-package.yml)
+[![Docs](https://github.com/FrancisH-C/TSbench/actions/workflows/static.yml/badge.svg)](https://francish-c.github.io/TSbench/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
 
-<!-- markdown-toc end -->
+A Python framework for benchmarking time series forecasting and generation models.
 
-# Description
+TSbench enables a unified *generate-and-benchmark* workflow where models serve as both data generators and forecasters, enabling closed-loop evaluation against known data generating processes (DGPs). This is a methodology well-established in econometrics but lacking a dedicated open-source tool — existing benchmark frameworks only compare forecasters on fixed real datasets, making it impossible to isolate model error from data complexity.
 
-Alpha version. Usability updates coming soon.
-khe purpose of this package is to define experiments for benchmarking
-models on a specified dataset by calculating various metrics. It
-includes the `Model` class, and any subclasses that define the
-appropriate methods can be utilized in experiments.
+**Key features:**
 
+- **Dual generate/forecast models** — the same model (ARMA, GARCH, etc.) generates synthetic data *and* forecasts it, enabling evaluation where the true DGP is known
+- **Multivariate GARCH family** — VEC-GARCH, VEC-SPD-GARCH, and DCC-GARCH implementations rare in the Python ecosystem
+- **Structured time series storage** — `(ID, timestamp, dim)` MultiIndex Parquet-backed data layer with metadata tracking
+- **Cross-language integration** — R model wrappers (rGARCH via rpy2) for direct Python/R comparison
+- **Reproducible experiments** — seeded RNG (PCG64), configurable pipeline, parallel processing via joblib
 
-## Demonstration
+## Quick Start
 
-Watch the accompanying video for a comprehensive presentation of the
-package in action.
+Install TSbench:
 
-[![Presentation](https://img.youtube.com/vi/s0gMqWn-nXo/0.jpg)](https://www.youtube.com/watch?v=s0gMqWn-nXo)
-
-# Quick Start
-
-To perform the basic installation, navigate to the TSbench directory
-using the command line and execute the following command:
-
-``` shell
+```shell
 python -m pip install .
 ```
 
-Refer to the [next section](#installation-information) for detailed
-information on:
-- [Virtual Environment in Python](#virtual-environment-in-python)
-- [TSbench and R](#tsbench-and-r)
-- [Installation Options](#installation-options)
-- [Troubleshooting for Windows](#troubleshooting-for-windows)
+Generate and forecast with an ARMA model:
 
-# Installation Information
+```python
+from numpy.random import Generator, PCG64
+from TSbench import TSmodels
 
-The installation has been tested with `Python 3.10.0`.
+# Define an ARMA(1,1) model with a reproducible seed
+model = TSmodels.ARMA(
+    lag=1,
+    rg=Generator(PCG64(1234)),
+    dim_label=["price"],
+    feature_label=["value"],
+)
 
-## Virtual Environment in Python
-It is strongly recommended to use a virtual environment for your Python
-installation. Some installation errors may occur otherwise due to path localization.
+# Generate 100 time steps of synthetic data
+data = model.generate(100)
+print(data.head())
 
-### Windows
+# Train the model on its own generated data
+model.set_data(data=model.loader.get_df())
+model.train()
 
-One way to set up a virtual environment in `Python` is by using `conda`.
-For detailed instructions, please refer to the official documentation:
-<https://docs.conda.io/projects/conda/en/latest/user-guide/tasks/manage-environments.html>
-[fortran](https://gcc.gnu.org/wiki/GFortranDistros)
-
-Please note that the following steps assume you have completed the full
-installation of Anaconda. If you haven't installed Anaconda yet, you can
-find the installation guide here: Anaconda Installation Guide for
-Windows. <https://docs.anaconda.com/free/anaconda/install/windows/>
-
-#### Create
-
-``` shell
-conda create -n TSbench python=3.10 anaconda
+# Forecast the next 5 steps
+forecast = model.forecast(T=5)
+print(forecast)
 ```
 
-#### Activate
+## Documentation
 
-When working within the virtual environment, you need to activate it in
-every terminal session. To activate the virtual environment, run the
-following command:
+Full documentation is available at **[francish-c.github.io/TSbench](https://francish-c.github.io/TSbench/)**.
 
-``` shell
-conda activate TSbench
-```
+Example notebooks:
 
-### Linux
-
-One way to set up a virtual environment in `Python` is by using
-`virtualenv`. For detailed instructions, please refer to the official
-documentation: <https://docs.python.org/3/library/venv.html>.
-
-#### Create
-
-``` shell
-python -m pip install virtualenv
-python -m virtualenv $HOME/.venv/TSbench
-```
-
-#### Activate
-
-When working within the virtual environment, you need to activate it in
-every terminal session. To activate the virtual environment, run the
-following command:
-
-``` shell
-source $HOME/.venv/TSbench/bin/activate
-```
-
-### Jupyter virtual environments
-
-You can add the virtual environment to `Jupyter` by executing the following
-command:
-
-``` shell
-python3 -m pip install ipykernel
-python3 -m pip install ipython
-python3 -m ipykernel install --name TSbench --user
-```
-
-## TSbench and R
-
-### Limitation
-
-TSbench and R is supported only on Linux. Moreover, installing `R` and
-CRAN packages requires root previleges.
-
-### Install R
-
-For information on how to install `R` and its packages please visit the official R website:
-<https://www.r-project.org/>. Ensure that you can run the `R` commands correctly by settings the `$PATH`
-variable and restarting the terminal
-
-### Install rpy2
-
-\`rpy2\` serves as the bridge to use \`R\` in Python, thus TSbench. As
-of now, `rpy2` **is not supported on windows**. It may work in the
-future or with some specific docker configuration. Alternatively, see
-the documentation for how to use outputs from external packages into
-TSbench.
-
-`rpy2` serves as the bridge between `Python` and `R`, enabling its use
-within TSbench. Please note that, currently, `rpy2` is **not supported
-on Windows**. For more details, you can refer to the installation guide
-at this link:
-<https://rpy2.github.io/doc/latest/html/overview.html#install-installation>.
-
-It may become compatible in the future or with specific `Docker`
-configurations. Alternatively, you can refer to the documentation for
-instructions on how to incorporate outputs from external packages into
-TSbench.
-
-### CRAN packages
-
-Ensure that you can load the list of required packages
-```
-rugarch
-rmgarch
-mts
-jsonlite
-```
-
-For installation, follow the instruction on [the official R
-website](https://www.r-project.org/). The packages require system
-dependencies handled by the package manager. Here are two common examples from
-the documentation on how to install CRAN pacakges.
-
-#### Ubuntu
-
-Install using the pacakge manager as detailed https://cloud.r-project.org/bin/linux/ubuntu/
-
-``shell
-sudo add-apt-repository ppa:c2d4u.team/c2d4u4.0+
-sudo apt install --no-install-recommends r-cran-rugarch r-cran-rmgarch r-cran-mts r-cran-jsonlite
-``
-
-``` shell
-python3 -m pip install .[R]
-```
-
-#### Archlinux
-
-###### Option 1. Using the AUR install the following packages
-```
-r-rugarch
-r-rmgarch
-r-mts
-r-jsonlite
-```
-
-###### Option 2. The Python setup
-1. Install dependencies
-	```shell
-	sudo pacman -S gcc-fortran tcl tk
-	```
-
-2. This step is optional and not recommended for a first attempt.
-	Change the default R directories to avoid prompts during installation
-	```python
-	from setup_R import R_config, R_directories
-	R_config()
-	R_directories()
-	```
-
-3. Automatic setup
-	``` shell
-	python3 -m pip install .[R]
-	python3 scripts/archlinux/setup_R.py
-	```
-
-#### Manual setup
-
-For advanced users.
-
-1. Using your package manager, install `r` and `r-dev` and all the dependencies for all the required packages.
-   This depend of the Linux distribution.
-
-2. This step is optional and not recommended for a first attempt. Create the \$HOME/.Renviron file and ensure it has a existent writable
-   library path:
-    ``` shell
-    R_HOME_USER=$HOME/.config/R
-    R_PROFILE_USER=$HOME/.config/R/
-    R_LIBS_USER=$HOME/.local/share/R/library
-    R_HISTFILE=$HOME/.local/share/R/history
-
-    mkdir -p $R_LIBS_USER
-    mkdir -p $R_PROFILE_USER
-
-    echo "R_HOME_USER = $R_HOME_USER
-    R_LIBS_USER = $R_LIBS_USER
-    R_PROFILE_USER = $R_PROFILE_USER
-    R_HISTFILE = $R_HISTFILE" >> $HOME/.Renviron
-    ```
-
-3. Make verification
-	```r
-	.libPaths()
-	```
-
-	It should output
-	```r
-	[1] $HOME/.local/share/R/library" "/usr/lib/R/"
-	```
-
-4.  Install the necessary R packages using the R environment:
-
-   ``` r
-   install.packages("rugarch", repos="https://cloud.r-project.org")
-   install.packages("rmgarch", repos="https://cloud.r-project.org")
-   install.packages("MTS", repos="https://cloud.r-project.org")
-   install.packages("jsonlite", repos="https://cloud.r-project.org")
-   ```
-
-If you have installation errors (packages with non-zero return code), you are probably missing dependencies.
-You can search for the pacakage specific dependencies.
-
-### Remove R from TSbench
-
-To remove `R` integration, simply uninstall `rpy2` using:
-``` shell
-python -m pip uninstall rpy2
-```
+- [TSdata usage](notebooks/TSdata/example_TSdata.ipynb) — loading, storing, and querying time series data
+- [TSmodels usage](notebooks/TSmodels/example_TSmodels.ipynb) — defining, generating, training, and forecasting
+- [Experiment pipeline](notebooks/experiment/example_experiment.ipynb) — configuring and running a full experiment
 
 ## Installation Options
 
-- To install with `test` dependencies:
-	``` shell
-	python3 -m pip install .[test]
-	```
-
-- To install with `R` dependencies:
-	``` shell
-	python3 -m pip install .[R]
-	```
-
-- To install all dependencies:
-	``` shell
-	python3 -m pip install .[all]
-	```
-
-
-## Troubleshooting for Windows
-
-### `PowerShell` `virtualenv` not working
-
-Use the following command
-
-``` ps
-set-executionpolicy remotesigned
+```shell
+python -m pip install .[test]    # with test dependencies
+python -m pip install .[docs]    # with documentation dependencies
+python -m pip install .[R]       # with R support (Linux only)
+python -m pip install .[all]     # everything
+python -m pip install -e .[all]  # editable install for development
 ```
 
-This command allows the execution of locally created scripts while
-requiring downloaded scripts to be signed by a trusted publisher.
+### Virtual Environment Setup
 
-### Issue with Locale Settings in Windows (French Language)
+It is strongly recommended to use a virtual environment.
 
-If you are encountering issues related to locale settings while working
-on Windows in French, changing the language to English (US) can resolve
-the problem, if you encounter a "UTF-8 codec error".
+**Linux**
 
-
-# Run Tests
-
-To run the tests
-``` shell
-python3 -m pytest -x -s
+```shell
+python -m pip install virtualenv
+python -m virtualenv $HOME/.venv/TSbench
+source $HOME/.venv/TSbench/bin/activate
 ```
 
-To run the tests with R
-``` shell
-python3 -m pytest --R
+**Windows (conda)**
+
+```shell
+conda create -n TSbench python=3.10 anaconda
+conda activate TSbench
 ```
-=======
+
+**Jupyter integration**
+
+```shell
+python -m pip install ipykernel ipython
+python -m ipykernel install --name TSbench --user
+```
+
+### R Integration (Linux Only)
+
+TSbench can use R models (rGARCH) via `rpy2`. This requires R and the following CRAN packages: `rugarch`, `rmgarch`, `MTS`, `jsonlite`.
+
+**Ubuntu:**
+
+```shell
+sudo add-apt-repository ppa:c2d4u.team/c2d4u4.0+
+sudo apt install --no-install-recommends r-cran-rugarch r-cran-rmgarch r-cran-mts r-cran-jsonlite
+python -m pip install .[R]
+```
+
+**Arch Linux:** install the build toolchain, then either pull the packages from the AUR (`r-rugarch`, `r-rmgarch`, `r-mts`, `r-jsonlite`) or use the manual install below.
+
+```shell
+sudo pacman -S gcc-fortran tcl tk
+```
+
+**Manual install (any distro):** install R, then from a shell:
+
+```shell
+R -e 'install.packages(c("jsonlite","rugarch","rmgarch","MTS"), repos="https://cloud.r-project.org")'
+python -m pip install .[R]
+```
+
+If you already have an R library and the install fails with `package 'X' was found, but >= Y is required`, your existing CRAN packages are stale. Refresh them in your user library first:
+
+```shell
+R -e 'update.packages(ask=FALSE, repos="https://cloud.r-project.org", lib.loc=.libPaths()[1])'
+```
+
+To remove R support: `python -m pip uninstall rpy2`.
+
+## Running Tests
+
+```shell
+python -m pytest -x -s          # basic tests
+python -m pytest --run-R             # include R-dependent tests
+python -m pytest --run-all           # all tests
+python -m pytest --run-performance   # performance tests
+```
+
+## Contributing
+
+Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+
+## Citation
+
+If you use TSbench in your research, please cite it:
+
+```bibtex
+@software{huot-chantal_tsbench,
+  author = {Huot-Chantal, Francis and Bastin, Fabian},
+  title = {{TSbench}: Time Series Benchmark in Python},
+  url = {https://github.com/FrancisH-C/TSbench},
+  license = {MIT}
+}
+```
+
+See [CITATION.cff](CITATION.cff) for the full citation metadata.
+
+## License
+
+[MIT](LICENSE)
