@@ -12,7 +12,7 @@ Installation
 
    .. code:: shell
 
-      git clone "https://github.com/FrancisH-C/TSload"
+      git clone "https://github.com/FrancisH-C/TSbench"
 
 #. Run the installation from the package root folder
 
@@ -65,7 +65,7 @@ Initialization
 
    import numpy as np
    import pandas as pd
-   from TSload import TSloader, DataFormat
+   from TSbench import TSloader, DataFormat
 
 .. code:: python
 
@@ -77,9 +77,7 @@ Add data
 ~~~~~~~~
 
 Two different way to add data are presented, starting with the most
-useful. For more ways to add data see examples in the notebooks. Here is
-`an example <../notebooks/example_operations.ipynb>`__ of such a
-notebook.
+useful.
 
 #. Add ID
 

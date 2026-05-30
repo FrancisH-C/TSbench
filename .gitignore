@@ -50,7 +50,8 @@ coverage.xml
 .mypy_cache/
 
 # Sphinx
-docs/_build/
+docs/build/
+docs/source/api/
 
 # Jupyter
 .ipynb_checkpoints/

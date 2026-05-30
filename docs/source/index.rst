@@ -1,10 +1,10 @@
-Welcome to TSload's documentation!
-==================================
+Welcome to TSbench's documentation!
+===================================
 
 Dataloader and dataset manipulation for timeseries.
 Test
 
-Package from https://github.com/FrancisH-C/TSload.
+Package from https://github.com/FrancisH-C/TSbench.
 
 Purpose
 -------

@@ -1,7 +1,7 @@
 # TSbench
 
 [![Tests](https://github.com/FrancisH-C/TSbench/actions/workflows/python-package.yml/badge.svg)](https://github.com/FrancisH-C/TSbench/actions/workflows/python-package.yml)
-[![Docs](https://github.com/FrancisH-C/TSbench/actions/workflows/static.yml/badge.svg)](https://francish-c.github.io/TSbench/)
+[![Docs](https://github.com/FrancisH-C/TSbench/actions/workflows/docs.yml/badge.svg)](https://francish-c.github.io/TSbench/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
 

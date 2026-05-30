@@ -1,7 +1,8 @@
 API
 ===
 
-.. automodapi:: TSload.TSloader
+.. automodapi:: TSbench.TSdata.TSloader
+    :skip: Parallel
+    :skip: delayed
 
-.. automodapi:: TSload.DataFormat
-    :skip: TSloader
+.. automodapi:: TSbench.TSdata.DataFormat

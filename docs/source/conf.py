@@ -18,7 +18,7 @@ sys.path.insert(0, os.path.abspath("../.."))
 
 # -- Project information -----------------------------------------------------
 
-project = "TSload"
+project = "TSbench"
 copyright = "2022, Francis Huot-Chantal"
 author = "Francis Huot-Chantal"
 
@@ -39,10 +39,7 @@ extensions = [
     "sphinx_automodapi.automodapi",
     "sphinx.ext.napoleon",
     "sphinx.ext.viewcode",
-    "nbsphinx",
 ]
-
-autodoc_default_options = {"autosummary_imported_members": True}
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
