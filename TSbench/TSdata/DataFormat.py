@@ -15,6 +15,25 @@ def convert_to_TSdf(
     dim_label: Optional[list[str] | np.ndarray] = None,
     feature_label: Optional[list[str] | np.ndarray] = None,
 ) -> pd.DataFrame:
+    """Convert any supported data type into a TimeSeries DataFrame.
+
+    Dispatches to the appropriate converter based on the type of ``data``
+    (pd.DataFrame, list, np.ndarray, or dict).
+
+    Args:
+        data (AnyData): Input data to convert.
+        ID (str, optional): Identifier for the time series.
+        timestamp (list | np.ndarray | pd.Index, optional): Timestamps.
+        dim_label (list[str] | np.ndarray, optional): Dimension labels.
+        feature_label (list[str] | np.ndarray, optional): Feature labels.
+
+    Returns:
+        pd.DataFrame: MultiIndex DataFrame with index ``(ID, timestamp, dim)``.
+
+    Raises:
+        ValueError: If ``data`` is not a supported type.
+
+    """
     if data is None or len(data) == 0:
         return pd.DataFrame(
             index=pd.MultiIndex.from_arrays(
@@ -147,6 +166,25 @@ def list_np_to_TSdf(
     dim_label: Optional[list[str] | np.ndarray] = None,
     feature_label: Optional[list[str] | np.ndarray] = None,
 ) -> pd.DataFrame:
+    """Convert a list of numpy arrays into a TimeSeries DataFrame.
+
+    Each array in the list becomes one or more feature columns.
+
+    Args:
+        arr_list (list[np.ndarray]): List of arrays to convert.
+        df (pd.DataFrame, optional): Existing DataFrame to append to.
+        ID (str, optional): Identifier for the time series.
+        timestamp (list | np.ndarray | pd.Index, optional): Timestamps.
+        dim_label (list[str] | np.ndarray, optional): Dimension labels.
+        feature_label (list[str] | np.ndarray, optional): Feature labels.
+
+    Returns:
+        pd.DataFrame: MultiIndex DataFrame with index ``(ID, timestamp, dim)``.
+
+    Raises:
+        ValueError: If ``ID`` is None or feature_label is shorter than arr_list.
+
+    """
     # ID
     if ID is None:
         raise ValueError("Need an ID.")
@@ -214,6 +252,25 @@ def np_to_TSdf(
     dim_label: Optional[list[str] | np.ndarray] = None,
     feature_label: Optional[list[str] | np.ndarray] = None,
 ) -> pd.DataFrame:
+    """Convert a numpy array into a TimeSeries DataFrame.
+
+    Supports 1-D, 2-D ``(T, dim)``, and 3-D ``(T, dim, features)`` arrays.
+
+    Args:
+        arr (np.ndarray): Array to convert.
+        df (pd.DataFrame, optional): Existing DataFrame to append to.
+        ID (str, optional): Identifier for the time series.
+        timestamp (list | np.ndarray | pd.Index, optional): Timestamps.
+        dim_label (list[str] | np.ndarray, optional): Dimension labels.
+        feature_label (list[str] | np.ndarray, optional): Feature labels.
+
+    Returns:
+        pd.DataFrame: MultiIndex DataFrame with index ``(ID, timestamp, dim)``.
+
+    Raises:
+        ValueError: If ``ID`` is None or array shape is inconsistent with labels.
+
+    """
     # ID
     if ID is None:
         raise ValueError("Need an ID.")
@@ -284,6 +341,22 @@ def dict_to_TSdf(
 def convert_from_TSdf(
     df: Optional[pd.DataFrame] = None, tstype: Type[Data] = pd.DataFrame
 ) -> Data:
+    """Convert a TimeSeries DataFrame back to the requested type.
+
+    Returns the data as ``tstype`` (pd.DataFrame or np.ndarray). For
+    np.ndarray, the shape depends on the number of dimensions and features.
+
+    Args:
+        df (pd.DataFrame, optional): TimeSeries DataFrame to convert.
+        tstype (Type[Data]): Target type (pd.DataFrame or np.ndarray).
+
+    Returns:
+        Data: Converted data in the requested type.
+
+    Raises:
+        ValueError: If conversion to ``tstype`` is not possible.
+
+    """
     if df is None or df.size == 0:
         df = pd.DataFrame(
             index=pd.MultiIndex.from_arrays(

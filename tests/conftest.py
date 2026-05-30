@@ -3,13 +3,21 @@
 import pytest
 
 
+OPTIONAL_MARKERS = {
+    "--run-R": "R",
+    "--run-performance": "performance",
+}
+
+
 def pytest_addoption(parser):
     parser.addoption(
         "--run-all", action="store_true", default=False, help="run all tests"
     )
-    parser.addoption("--R", action="store_true", default=False, help="run R tests")
     parser.addoption(
-        "--performance",
+        "--run-R", action="store_true", default=False, help="run R tests"
+    )
+    parser.addoption(
+        "--run-performance",
         action="store_true",
         default=False,
         help="run performance tests",
@@ -23,15 +31,13 @@ def pytest_configure(config):
 
 def pytest_collection_modifyitems(config, items):
     if config.getoption("--run-all"):
-        # --run--all given in cli: run all
+        # --run-all given in cli: run all
         return
 
-    # List of options to run.
-    option_flags = ["--performance", "--R"]
     # Check, for every option flag, if it is specified run it. Otherwise skip it.
-    for option in option_flags:
+    for option, marker in OPTIONAL_MARKERS.items():
         if not config.getoption(option):
             skip_option = pytest.mark.skip(reason=f"need the {option} option to run")
             for item in items:
-                if option[2:] in item.keywords:
+                if marker in item.keywords:
                     item.add_marker(skip_option)

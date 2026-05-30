@@ -23,8 +23,8 @@ def test_multiprocessing_loaders():
     df2 = pd.DataFrame(data=d).drop("feature0", axis=1)
     df2["timestamp"] = df2["timestamp"] + 10
 
-    def loader_logger(loader):
-        logging.info(loader.df)
+    def loader_logger(input_loader):
+        logging.info(input_loader.df)
 
     # Set the splitting scheme
     metaloader = LoaderTSdf(
@@ -62,7 +62,7 @@ def test_multiprocessing_loaders():
 
     p2 = LoadersProcess(
         input_loaders=[loader1, loader2],
-        process_split=lambda loader: loader.write(),
+        process_split=lambda input_loader: input_loader.write(),
         autoload=False,
     )
 

@@ -105,8 +105,7 @@ TSbench can use R models (rGARCH) via `rpy2`. This requires R and the following 
 **Ubuntu:**
 
 ```shell
-sudo add-apt-repository ppa:c2d4u.team/c2d4u4.0+
-sudo apt install --no-install-recommends r-cran-rugarch r-cran-rmgarch r-cran-mts r-cran-jsonlite
+R -e 'lib <- Sys.getenv("R_LIBS_USER"); dir.create(lib, recursive=TRUE, showWarnings=FALSE); install.packages(c("jsonlite","rugarch","rmgarch","MTS"), lib=lib, repos="https://cloud.r-project.org")'
 python -m pip install .[R]
 ```
 
