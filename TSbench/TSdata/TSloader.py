@@ -1518,9 +1518,9 @@ class LoaderTSdfCSV(LoaderTSdf):
 
 
 class LoadersProcess:
-    """
-    # Big modification : now self.process_df takes loader as input and outputs df.
-    # Hence, it should be called process_ID
+    """Apply a processing function across multiple loaders in parallel using joblib.
+
+    ``process_df`` takes a loader as input and outputs a DataFrame.
 
     Need to respect:
     - n_jobs + n_input_loaders <= n threads
