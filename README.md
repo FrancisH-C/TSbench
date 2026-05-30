@@ -102,10 +102,13 @@ python -m ipykernel install --name TSbench --user
 
 TSbench can use R models (rGARCH) via `rpy2`. This requires R and the following CRAN packages: `rugarch`, `rmgarch`, `MTS`, `jsonlite`.
 
-**Ubuntu:**
+**Ubuntu:** the current `rpy2` requires **R ≥ 4.5.0**, but Ubuntu's default repositories ship an older R. Install a recent R by following the [CRAN apt repository instructions](https://cloud.r-project.org/bin/linux/ubuntu/).
+
+Then build and install the R packages,
 
 ```shell
-R -e 'lib <- Sys.getenv("R_LIBS_USER"); dir.create(lib, recursive=TRUE, showWarnings=FALSE); install.packages(c("jsonlite","rugarch","rmgarch","MTS"), lib=lib, repos="https://cloud.r-project.org")'
+sudo apt install -y r-base-dev libgmp-dev libmpfr-dev libnlopt-dev
+R -e 'install.packages(c("jsonlite","rugarch","rmgarch","MTS"), repos="https://cloud.r-project.org")'
 python -m pip install .[R]
 ```
 

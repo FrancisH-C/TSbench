@@ -3,6 +3,8 @@
 *.pqt
 *.pkl
 *.json
+*.csv
+temp-plot.html
 data/
 subset_data/
 examples/
