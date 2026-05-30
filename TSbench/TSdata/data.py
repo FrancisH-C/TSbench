@@ -10,6 +10,18 @@ AnyData = Union[list, np.ndarray, pd.DataFrame]
 
 
 def size(data: AnyData):
+    """Return the length of the first axis of a time series data object.
+
+    Args:
+        data (AnyData): Input data as np.ndarray, list, or pd.DataFrame.
+
+    Returns:
+        int: Length along the first axis.
+
+    Raises:
+        ValueError: If ``data`` is not a supported type.
+
+    """
     if isinstance(data, np.ndarray):
         return np.size(data, 0)
     if isinstance(data, list):
@@ -20,7 +32,7 @@ def size(data: AnyData):
             return np.size(data[0], 0)
         else:  # non-nested list
             return len(data)
-    if isinstance(data, pd.DataFrame):
+    if isinstance(data, (pd.DataFrame, pd.Series)):
         return data.shape[0]
     else:
         raise ValueError("Data is of the wrong type to format")

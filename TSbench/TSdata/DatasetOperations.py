@@ -79,6 +79,20 @@ class InitializeCSV:
         split_from_filename,
         test=False,
     ):
+        """Initialize InitializeCSV.
+
+        Args:
+            datatype (str): Name of the datatype for the output loader.
+            original_path (str): Directory containing the source CSV files.
+            processed_path (str): Directory where processed Parquet files are written.
+            process_df (Callable): Function that transforms a raw CSV DataFrame
+                into a TSdf-compatible format.
+            split_from_filename (Callable): Function that extracts a split label
+                from a CSV filename.
+            test (bool): If True, process only the first file and print debug
+                output. Default is False.
+
+        """
         self.datatype = datatype
         self.original_path = original_path
         self.processed_path = processed_path
@@ -87,6 +101,7 @@ class InitializeCSV:
         self.test = test
 
     def initialize(self):
+        """Read CSV files, process them, and write as Parquet via a LoaderTSdf."""
         files = os.listdir(self.original_path)
         loader = LoaderTSdf(path=self.processed_path, datatype=self.datatype)
 

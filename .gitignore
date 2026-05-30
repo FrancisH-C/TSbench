@@ -1,22 +1,11 @@
-pyproject.toml
-
-# no images
+# Project-specific data and outputs
 *.png
 *.pqt
 *.pkl
 *.json
-
-# ignore simulted data
 data/
-.pqt
-.json
-.pkl
 subset_data/
-# ignore examples' output
-examples
-# ignore TSX
-**/TSX
-# ignore experiments' output
+examples/
 notebooks/*/experiments/*
 notebooks/*/data/*
 notebooks/*/subset_data/*
@@ -26,83 +15,45 @@ scripts/experiments/*
 __pycache__/
 *.py[cod]
 *$py.class
-
-# C extensions
 *.so
 
 # Distribution / packaging
 .Python
-build
-develop-eggs/
+build/
 dist/
+sdist/
+wheels/
 downloads/
 eggs/
 .eggs/
+parts/
+var/
 lib/
 lib64/
-parts/
-sdist/
-var/
-wheels/
 *.egg-info/
-.installed.cfg
 *.egg
+.installed.cfg
 MANIFEST
-
-# PyInstaller
-#  Usually these files are written by a python script from a template
-#  before PyInstaller builds the exe, so as to inject date/other infos into it.
-*.manifest
-*.spec
-
-# Installer logs
-pip-log.txt
-pip-delete-this-directory.txt
 
 # Unit test / coverage reports
 htmlcov/
-.tox/
+.cache
 .coverage
 .coverage.*
-.cache
-nosetests.xml
-coverage.xml
-*.cover
 .hypothesis/
 .pytest_cache/
+.tox/
+coverage.xml
+*.cover
 
-# Translations
-*.mo
-*.pot
+# Type checkers
+.mypy_cache/
 
-# Django stuff:
-*.log
-local_settings.py
-db.sqlite3
+# Sphinx
+docs/_build/
 
-# Flask stuff:
-instance/
-.webassets-cache
-
-# Scrapy stuff:
-.scrapy
-
-# Sphinx documentation
-
-# PyBuilder
-target/
-
-# Jupyter Notebook
-.ipynb_checkpoints
-
-# pyenv
-.python-version
-
-# celery beat schedule file
-celerybeat-schedule
-
-# SageMath parsed files
-*.sage.py
+# Jupyter
+.ipynb_checkpoints/
 
 # Environments
 .env
@@ -110,22 +61,6 @@ celerybeat-schedule
 env/
 venv/
 ENV/
-env.bak/
-venv.bak/
 
-# Spyder project settings
-.spyderproject
-.spyproject
-
-# Rope project settings
-.ropeproject
-
-# mkdocs documentation
-/site
-
-# mypy
-.mypy_cache/
-
-*.org*
-*.ob-jupyter
-*.bbl
+# pyenv
+.python-version

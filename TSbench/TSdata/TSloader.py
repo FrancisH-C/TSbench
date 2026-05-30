@@ -17,6 +17,13 @@ from TSbench.TSdata.DataFormat import convert_to_TSdf, convert_from_TSdf
 
 
 class TSloader:
+    """Base class for loading, storing, and retrieving time series data.
+
+    Manages a dataset directory containing Parquet files, organized by
+    datatype and split pattern, with metadata tracking.
+
+    """
+
     path: str
     df: pd.DataFrame
     datatype: str
@@ -35,7 +42,22 @@ class TSloader:
         permission: str = "overwrite",
         autoload: bool = True,
     ) -> None:
-        """Init method."""
+        """Initialize TSloader.
+
+        Args:
+            path (str): Directory path for the dataset.
+            datatype (str): Name of the datatype to load.
+            split_pattern (np.ndarray, optional): File split names for the datatype.
+            subsplit_pattern (np.ndarray, optional): Subset of splits to operate on.
+            subsplit_pattern_index (np.ndarray, optional): Indices into split_pattern
+                to use as the subsplit.
+            permission (str): Access level: 'read', 'write', or 'overwrite'.
+            autoload (bool): If True, automatically load data on split changes.
+
+        Raises:
+            ValueError: If ``datatype`` is None.
+
+        """
         # if split_pattern is None:
         #     split_pattern = np.array(["1"])
         # if subsplit_pattern is None:
@@ -65,6 +87,15 @@ class TSloader:
         subsplit_pattern: Optional[np.ndarray] = None,
         subsplit_pattern_index: Optional[np.ndarray] = None,
     ):
+        """Set the datatype and load or initialize the DataFrame.
+
+        Args:
+            datatype (str): Name of the datatype.
+            split_pattern (np.ndarray, optional): File split names.
+            subsplit_pattern (np.ndarray, optional): Subset of splits.
+            subsplit_pattern_index (np.ndarray, optional): Indices into split_pattern.
+
+        """
         ## Set the datatype
         self.set_datatype(
             datatype, split_pattern, subsplit_pattern, subsplit_pattern_index
@@ -125,6 +156,7 @@ class TSloader:
         shutil.rmtree(self.path, ignore_errors=ignore_errors)
 
     def restart_dataset(self) -> None:
+        """Remove and recreate the dataset directory."""
         self.rm_dataset(ignore_errors=True)
         self._create_path()
 
@@ -258,8 +290,8 @@ class TSloader:
         """Add the current datatype to the metadata indices."""
         if self.metadata.empty:
             self.metadata = pd.DataFrame(
-                columns=pd.Index(["datatype", "IDs", "features", "split_pattern"])
-            )
+                columns=pd.Index(["datatype", "IDs", "features", "split_pattern"]),
+            ).astype(object)
             self.metadata["datatype"] = [self.datatype]
             self.metadata.set_index(["datatype"], inplace=True, drop=True)
 
@@ -295,8 +327,6 @@ class TSloader:
             if np.size(self.metadata.at[self.datatype, "split_pattern"]) != 0:
                 # split pattern already defined in metadata, do nothing
                 return
-            # Give it the default value
-            split_pattern = np.array(["1"])
         # update split_pattern
         self.set_metadata(split_pattern=split_pattern)
 
@@ -315,7 +345,9 @@ class TSloader:
             # if entry.dtype == "<U6":
 
             if key not in self.metadata.columns:
-                self.metadata[key] = pd.Series(data=np.array([], dtype=entry.dtype))
+                self.metadata[key] = pd.Series(
+                    data=np.array([], dtype=entry.dtype), dtype=object
+                )
             elif np.size(self.metadata[key]) > 0 and self.permission != "overwrite":
                 raise ValueError(
                     f"{key} already exsists in metadata. "
@@ -348,9 +380,6 @@ class TSloader:
 
     def update_metadata_from_dataset(self) -> None:
         """Update metadata using dataset."""
-        # for datatype in self.list_datatypes():
-        #     self.set_datatype(datatype)
-
         self.update_split_pattern_from_dataset()
         self.df = self.load()
 
@@ -388,7 +417,7 @@ class TSloader:
         """
         for key in metadata:
             if key not in self.metadata.columns:
-                self.metadata[key] = ""
+                self.metadata[key] = pd.Series(dtype=object)
                 self.metadata.at[self.datatype, key] = metadata[key]
 
             updated_metadata = np.unique(
@@ -429,7 +458,9 @@ class TSloader:
             )
 
         initial_datatype = self.datatype
-        self.metadata = pd.DataFrame()  # needed for DatasetOperations.merge_dataset
+        self.metadata = pd.DataFrame(
+            dtype=object
+        )  # needed for DatasetOperations.merge_dataset
         for filename in os.listdir(self.path):
             if filename[0:9] == "metadata-":
                 metadata_file = self._append_path(filename)
@@ -458,6 +489,21 @@ class TSloader:
     def merge_splitted_data(
         loader, n_jobs, write_metadata: bool = True, rm: bool = True
     ) -> None:
+        """Merge split files by grouping on a date substring.
+
+        Combines multiple fine-grained splits into coarser day-level splits
+        using parallel processing.
+
+        Args:
+            loader (TSloader): Loader whose splits will be merged.
+            n_jobs (int): Number of parallel jobs.
+            write_metadata (bool): Whether to write updated metadata.
+            rm (bool): Whether to remove the original split files after merging.
+
+        Raises:
+            ValueError: If permissions are insufficient.
+
+        """
         if loader.permission == "read":
             raise ValueError(
                 "You cannot write metadata while merging " + "with 'read' permission."
@@ -523,7 +569,7 @@ class TSloader:
         if os.path.isfile(metadata_file):
             self.metadata = pd.read_parquet(metadata_file)
         else:
-            self.metadata = pd.DataFrame(index=pd.Index(["datatype"]))
+            self.metadata = pd.DataFrame(index=pd.Index(["datatype"])).astype(object)
         return self.metadata
 
     def write_metadata(self) -> None:
@@ -580,6 +626,21 @@ class TSloader:
         test_size: Optional[float] = None,
         rounding: Optional[str] = "before",
     ) -> tuple[np.ndarray | pd.DataFrame, np.ndarray | pd.DataFrame]:
+        """Split the current DataFrame into train and test sets.
+
+        Args:
+            train_size (float, optional): Proportion for training. Default is 0.7.
+            test_size (float, optional): Proportion for testing. Default is 0.3.
+            rounding (str, optional): How to round the split index:
+                'before' (floor) or 'after' (ceil).
+
+        Returns:
+            tuple: ``(train, test)`` DataFrames.
+
+        Raises:
+            ValueError: If train_size + test_size != 1 or rounding is invalid.
+
+        """
         if train_size is None:
             if test_size is None:
                 test_size = 0.3
@@ -634,11 +695,6 @@ class TSloader:
         if unique:
             timestamps = np.unique(timestamps)
 
-        # Assuming sorted timestamps
-        # If len(IDs) == 1, timestamps is sorted; else,
-        # if isinstance(IDs, slice) or len(IDs) != 1:
-        #     timestamps = np.sort(timestamps)
-
         if start is not None:
             start_index = int(np.searchsorted(timestamps, start))
 
@@ -658,7 +714,27 @@ class TSloader:
         dims: Optional[np.ndarray] = None,
         features: Optional[np.ndarray] = None,
         keep_unique=False,
-    ) -> pd.DataFrame:
+    ) -> "TSloader":
+        """Filter the loader's DataFrame in place and return self.
+
+        Applies the same selection logic as ``get_timeseries`` but stores the
+        result back into ``self.df``.
+
+        Args:
+            start: Start timestamp or value for slicing.
+            start_index (int, optional): Start row index.
+            end: End timestamp or value for slicing.
+            end_index (int, optional): End row index.
+            IDs (np.ndarray | str, optional): IDs to keep.
+            timestamps (np.ndarray, optional): Specific timestamps to keep.
+            dims (np.ndarray, optional): Dimensions to keep.
+            features (np.ndarray, optional): Feature columns to keep.
+            keep_unique (bool): If True, drop duplicate index entries.
+
+        Returns:
+            TSloader: Self, for method chaining.
+
+        """
         if isinstance(IDs, str):
             IDs = np.array([IDs])
         df = self.get_df(
@@ -755,9 +831,11 @@ class TSloader:
         if keep_unique:
             df = self.df.loc[IDs, timestamps, dims][features]
             df = df.loc[~df.index.duplicated(keep="first")]
-            return convert_from_TSdf(df)
+            return convert_from_TSdf(df, tstype)
         else:
-            return convert_from_TSdf(self.df.loc[IDs, timestamps, dims][features])
+            return convert_from_TSdf(
+                self.df.loc[IDs, timestamps, dims][features], tstype
+            )
         # What follows does
         # self.df.loc[IDs, timestamps, dims][features]
         # much more quickly (orders of magnitudes) but it creates a lot of DataFrames (using copy) which takes up a lot of memory.
@@ -783,6 +861,7 @@ class TSloader:
         # return convert_from_TSdf(df[features], tstype)
 
     def concat_subsplit_pattern(self):
+        """Concatenate DataFrames from all splits in the subsplit pattern."""
         df = pd.DataFrame(
             index=pd.MultiIndex.from_arrays(
                 [[], [], []], names=("ID", "timestamp", "dim")
@@ -794,6 +873,7 @@ class TSloader:
         self.df = df
 
     def get_split_pattern(self) -> np.ndarray:
+        """Return the split pattern for the current datatype from metadata."""
         return self.metadata.at[self.datatype, "split_pattern"]
 
     def set_subsplit_pattern(
@@ -896,6 +976,15 @@ class TSloader:
             self.load()
 
     def get_filename(self, for_metadata: bool = False) -> str:
+        """Build the full file path for the current split or metadata.
+
+        Args:
+            for_metadata (bool): If True, return the metadata file path.
+
+        Returns:
+            str: Absolute path to the Parquet file.
+
+        """
         if for_metadata:
             filename = "metadata.pqt"
             return self._append_path(filename)
@@ -1019,12 +1108,31 @@ class TSloader:
                 os.remove(filename)
 
     def get_IDs(self, from_metadata=False) -> np.ndarray:
+        """Return the unique IDs in the current datatype.
+
+        Args:
+            from_metadata (bool): If True, read IDs from metadata instead
+                of the loaded DataFrame.
+
+        Returns:
+            np.ndarray: Array of unique ID strings.
+
+        """
         if from_metadata:
             return self.metadata.loc[self.datatype, "IDs"]
         else:
             return np.unique(self.get_df().index.get_level_values("ID"))
 
     def get_dim_label(self, ID: Optional[str] = None) -> pd.Index:
+        """Return the unique dimension labels.
+
+        Args:
+            ID (str, optional): If given, return dimensions for that ID only.
+
+        Returns:
+            pd.Index: Unique dimension labels.
+
+        """
         if ID is None:
             return self.get_df().index.get_level_values("dim").unique()
         else:
@@ -1281,7 +1389,12 @@ class LoaderTSdf(TSloader):
     """
 
     def __init__(self, **TSloader_args) -> None:
-        """Init method."""
+        """Initialize LoaderTSdf.
+
+        Args:
+            **TSloader_args: Keyword arguments forwarded to ``TSloader.__init__``.
+
+        """
         # Permissions
         super().__init__(**TSloader_args)
 
@@ -1297,7 +1410,18 @@ class LoaderTSdf(TSloader):
 
 
 class LoaderTSdfCSV(LoaderTSdf):
+    """LoaderTSdf variant that reads and writes CSV files instead of Parquet."""
+
     def get_filename(self, for_metadata: bool = False) -> str:
+        """Build the full file path for the current split or metadata.
+
+        Args:
+            for_metadata (bool): If True, return the metadata file path.
+
+        Returns:
+            str: Absolute path to the CSV file.
+
+        """
         if for_metadata:
             filename = "metadata.csv"
             return self._append_path(filename)
@@ -1314,8 +1438,10 @@ class LoaderTSdfCSV(LoaderTSdf):
         """
         metadata_file = self.get_filename(for_metadata=True)
         if os.path.isfile(metadata_file):
-            self.metadata = pd.read_csv(metadata_file)
+            self.metadata = pd.read_csv(metadata_file, dtype_backend="numpy_nullable")
             self.metadata.set_index(["datatype"], inplace=True, drop=True)
+            # Ensure object dtype so cells can hold numpy arrays
+            self.metadata = self.metadata.astype(object)
             # pd.read_csv gives string, parse it as np.ndarray
             for index in self.metadata.index:
                 for column in self.metadata.columns:
@@ -1337,7 +1463,7 @@ class LoaderTSdfCSV(LoaderTSdf):
         else:
             self.metadata = pd.DataFrame(
                 columns=pd.Index(["IDs", "features", "split_pattern"]),
-            )
+            ).astype(object)
 
         return self.metadata
 
@@ -1395,8 +1521,6 @@ class LoadersProcess:
     # Big modification : now self.process_df takes loader as input and outputs df.
     # Hence, it should be called process_ID
 
-    A collection of loaders and a function to apply to them using multiprocessing.
-
     Need to respect:
     - n_jobs + n_input_loaders <= n threads
 
@@ -1444,9 +1568,31 @@ class LoadersProcess:
         process_split: Optional[Callable[["TSloader", "TSloader"], None]] = None,
         process_df: Optional[Callable[[pd.DataFrame], pd.DataFrame]] = None,
     ) -> None:
-        """Init method."""
+        """Initialize LoadersProcess.
+
+        Args:
+            data_path (str, optional): Path to the input dataset directory.
+            datatype (str, optional): Datatype to process.
+            IDs (np.ndarray, optional): Subset of IDs to process.
+            subsplit_pattern (np.ndarray, optional): Splits to operate on.
+            autoload (bool): Whether input loaders autoload data.
+            input_loaders (list[TSloader], optional): Pre-built input loaders.
+            output_loader (TSloader, optional): Pre-built output loader.
+            n_input_loaders (int): Number of input loaders to create.
+            n_jobs (int): Number of parallel jobs per loader.
+            process_split (Callable, optional): Function applied per split.
+            process_df (Callable, optional): Function applied per DataFrame.
+
+        """
+
         self.n_jobs = n_jobs
         self.process_split = process_split
+        self.process_df = process_df
+
+        if process_df is None:
+            def process_df(df: pd.DataFrame) -> pd.DataFrame:
+                return df
+
         self.process_df = process_df
 
         self.set_input_loaders(
@@ -1467,6 +1613,13 @@ class LoadersProcess:
         self.set_IDs(IDs=IDs)
 
     def set_IDs(self, IDs=None):
+        """Set the IDs to process, intersecting with available IDs.
+
+        Args:
+            IDs (np.ndarray, optional): Desired IDs. If None, use all
+                IDs from the first input loader.
+
+        """
         IDs_from_loader = self.input_loaders[0].get_IDs()
         if IDs is None:
             self.IDs = IDs_from_loader
@@ -1482,6 +1635,21 @@ class LoadersProcess:
         n_input_loaders: int = 1,
         autoload: bool = False,
     ) -> None:
+        """Create or assign input loaders, partitioning splits across them.
+
+        Args:
+            input_loaders (list[TSloader], optional): Pre-built loaders.
+            data_path (str, optional): Path used when building loaders.
+            datatype (str, optional): Datatype for the loaders.
+            subsplit_pattern (np.ndarray, optional): Splits to distribute.
+            n_input_loaders (int): Number of loaders to create.
+            autoload (bool): Whether loaders autoload on split change.
+
+        Raises:
+            ValueError: If data_path is missing, split_pattern is empty,
+                or loader count does not match n_input_loaders.
+
+        """
         if input_loaders is None:
             if data_path is None:
                 raise ValueError("Need data_path")
@@ -1522,10 +1690,10 @@ class LoadersProcess:
                 autoload=autoload,
             )
             input_loaders.append(input_loader)
-        if len(input_loaders) != n_input_loaders:
-            raise ValueError(
-                f"Exptected {n_input_loaders} loaders got {len(input_loaders)}"
-            )
+            if len(input_loaders) != n_input_loaders:
+                raise ValueError(
+                    f"Exptected {n_input_loaders} loaders got {len(input_loaders)}"
+                )
 
         self.input_loaders = input_loaders
 
@@ -1536,6 +1704,15 @@ class LoadersProcess:
         output_datatype,
         subsplit_pattern,
     ):
+        """Assign or create the output loader for writing processed results.
+
+        Args:
+            output_loader (TSloader, optional): Pre-built output loader.
+            output_path (str): Path for the output dataset.
+            output_datatype (str): Datatype name for output.
+            subsplit_pattern (np.ndarray): Split pattern for the output loader.
+
+        """
         if output_loader is None:
             output_loader = LoaderTSdf(
                 path=output_path,
@@ -1546,6 +1723,14 @@ class LoadersProcess:
         self.output_loader = output_loader
 
     def run_process_df(self, input_loader=None) -> None:
+        """Apply ``process_df`` to each ID in parallel and store the result.
+
+        Args:
+            input_loader (TSloader, optional): Loader to read from.
+                Defaults to the first input loader.
+
+        """
+
         def run_process_df_ID(input_loader, ID):
             """Single fixed loader and single fixed ID to process.
 
@@ -1579,7 +1764,7 @@ class LoadersProcess:
             self.output_loader.set_current_split(split)
             if self.process_split is not None:
                 # run process_split
-                self.process_split(input_loader, self.output_loader)
+                self.process_split(input_loader)
             # run process_df
             if self.process_df is not None:
                 self.run_process_df(input_loader)
@@ -1589,6 +1774,12 @@ class LoadersProcess:
             self.output_loader.update_metadata_from_dataset()
 
     def reload(self, IDs=None):
+        """Reload all input loaders from disk and reset the ID list.
+
+        Args:
+            IDs (np.ndarray, optional): New subset of IDs to process.
+
+        """
         for loader in self.input_loaders:
             loader.load()
         self.set_IDs(IDs=IDs)
