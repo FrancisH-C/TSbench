@@ -1,6 +1,4 @@
-from TSbench.TSmodels.models import BaseModel
 from TSbench.TSdata.TSloader import LoaderTSdf, LoadersProcess
-import numpy as np
 
 
 class Experiment:

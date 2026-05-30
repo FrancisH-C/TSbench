@@ -1,11 +1,7 @@
 import matplotlib.pyplot as plt
-import pandas as pd
-import numpy as np
-from ipywidgets import interact, interactive, fixed, interact_manual
 import ipywidgets as widgets
 
-from typing import Callable, Optional, Type
-from TSbench.TSdata.data import AnyData, Data
+from typing import Optional
 
 
 def visualize_loader(loader):

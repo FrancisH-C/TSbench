@@ -1,6 +1,6 @@
 """Data convertion between TimeSeries DataFrame and multiple common types."""
 
-from typing import Any, Optional, Type, Union
+from typing import Any, Optional, Type
 
 import numpy as np
 import pandas as pd

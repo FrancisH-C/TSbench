@@ -746,7 +746,7 @@ class TSloader:
             timestamps=timestamps,
             dims=dims,
             features=features,
-            keep_unique=False,
+            keep_unique=keep_unique,
         )
         self.set_df(df)
         return self
@@ -778,7 +778,7 @@ class TSloader:
             timestamps=timestamps,
             dims=dims,
             features=features,
-            keep_unique=False,
+            keep_unique=keep_unique,
         )
 
     def get_timeseries(
@@ -838,7 +838,8 @@ class TSloader:
             )
         # What follows does
         # self.df.loc[IDs, timestamps, dims][features]
-        # much more quickly (orders of magnitudes) but it creates a lot of DataFrames (using copy) which takes up a lot of memory.
+        # much more quickly (orders of magnitudes) but it creates a lot of
+        # DataFrames (using copy) which takes up a lot of memory.
 
         # # # keep index information in columns
         # df = self.df.copy()
