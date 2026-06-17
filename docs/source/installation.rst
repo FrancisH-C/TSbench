@@ -1,15 +1,48 @@
-Installing R support (rpy2)
-===========================
+Installation
+============
+
+Install TSbench into a virtual environment, then add any optional dependency
+groups you need. The optional R model support has its own setup further down.
+
+Virtual environment setup
+-------------------------
+
+Install TSbench into a virtual environment so its dependencies stay isolated
+from the system Python.
+
+**Linux**
+
+.. code-block:: shell
+
+   python -m venv .venv
+   source .venv/bin/activate
+
+**Windows (conda)**
+
+.. code-block:: shell
+
+   conda create -n TSbench python=3.10
+   conda activate TSbench
+
+To expose the environment as a Jupyter kernel:
+
+.. code-block:: shell
+
+   python -m pip install ipykernel ipython
+   python -m ipykernel install --name TSbench --user
+
+R support (rGARCH via rpy2)
+---------------------------
 
 TSbench can run R models (``rGARCH``, wrapping R's ``rugarch`` / ``rmgarch``)
 directly from Python through `rpy2 <https://rpy2.github.io/>`_. R support is
 **optional** and **Linux only**.
 
-This page is a complete, step-by-step guide for **Ubuntu**. Brief notes for
-Arch Linux and other distributions follow at the end.
+The rest of this page is a complete, step-by-step guide for **Ubuntu**. Brief
+notes for Arch Linux and other distributions follow at the end.
 
 What you need
--------------
+~~~~~~~~~~~~~
 
 R support has three layers, installed in this order:
 
@@ -24,13 +57,13 @@ R support has three layers, installed in this order:
 
    Activate your virtual environment before installing the Python pieces, so
    ``rpy2`` lands in the project environment rather than the system Python.
-   See the *Virtual Environment Setup* section of the README.
+   See `Virtual environment setup`_ above.
 
 Ubuntu
-------
+~~~~~~
 
 Step 1 -- Install a recent R from CRAN
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Add the CRAN apt repository, which provides the latest R 4.x. These are the canonical CRAN
 steps (see the upstream `CRAN apt instructions
@@ -69,7 +102,7 @@ Verify you got R ≥ 4.5.0:
    R --version
 
 Step 2 -- Install system build dependencies
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Both ``rpy2`` and several CRAN packages compile from source, so you need a C /
 Fortran toolchain, the Python headers, and a few numeric libraries:
@@ -88,7 +121,7 @@ Fortran toolchain, the Python headers, and a few numeric libraries:
   pulled in by ``rugarch`` / ``rmgarch`` and their dependencies.
 
 Step 3 -- Install the CRAN R packages
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. code-block:: shell
 
@@ -98,7 +131,7 @@ This compiles the packages into your user R library and can take several
 minutes. It must finish without error before continuing.
 
 R library location
-~~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^
 
 Run ``R`` as your normal user, not with ``sudo``. As your user, R installs and
 loads packages from a per-user library (the first entry of ``.libPaths()``).
@@ -119,7 +152,7 @@ To make the user library explicit and stable across sessions:
 
 
 Step 4 -- Install TSbench with R support
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 With your virtual environment active:
 
@@ -129,7 +162,7 @@ With your virtual environment active:
    python -m pip install -e .[R]     # editable install for development
 
 Verifying the installation
----------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Confirm the Python bridge can reach R and the wrapper imports:
 
@@ -149,7 +182,7 @@ Finally, run the R-marked tests (skipped by default):
    python -m pytest --run-R
 
 Troubleshooting
----------------
+~~~~~~~~~~~~~~~
 
 **``package 'X' was found, but >= Y is required``**
     Your existing CRAN packages are stale. Refresh your user library, then
@@ -205,7 +238,7 @@ Troubleshooting
     Afterwards the ``pytest`` run completes without the dynamic-linking error.
 
 Removing R support
-------------------
+~~~~~~~~~~~~~~~~~~
 
 R support is fully optional. To remove just the Python bridge:
 
@@ -217,7 +250,7 @@ The core Python models continue to work; ``rGARCH`` simply stops being
 importable.
 
 Other distributions
---------------------
+~~~~~~~~~~~~~~~~~~~
 
 **Arch Linux.** Install the build toolchain, then pull the packages from the
 AUR (``r-rugarch``, ``r-rmgarch``, ``r-mts``, ``r-jsonlite``) or use the manual

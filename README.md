@@ -19,11 +19,24 @@ TSbench enables a unified *generate-and-benchmark* workflow where models serve a
 
 ## Quick Start
 
-Install TSbench:
+Set up a virtual environment and install TSbench:
 
 ```shell
+python -m venv .venv
+source .venv/bin/activate
 python -m pip install .
 ```
+
+Install from the package root. The bracketed extras are optional and can be combined (e.g. `.[test,docs]`):
+
+```shell
+python -m pip install .[test]    # + test suite dependencies (pytest)
+python -m pip install .[docs]    # + Sphinx documentation toolchain
+python -m pip install .[all]     # everything (test + docs + R)
+python -m pip install -e .[all]  # editable install for development
+```
+
+For virtual environment setup (including Windows/conda and a Jupyter kernel), see the [installation guide](https://francish-c.github.io/TSbench/installation.html).
 
 Generate and forecast with an ARMA model:
 
@@ -62,43 +75,7 @@ Example notebooks:
 - [TSmodels usage](notebooks/TSmodels/example_TSmodels.ipynb) — defining, generating, training, and forecasting
 - [Experiment pipeline](notebooks/experiment/example_experiment.ipynb) — configuring and running a full experiment
 
-## Installation Options
-
-```shell
-python -m pip install .[test]    # with test dependencies
-python -m pip install .[docs]    # with documentation dependencies
-python -m pip install .[R]       # with R support (Linux only)
-python -m pip install .[all]     # everything
-python -m pip install -e .[all]  # editable install for development
-```
-
-### Virtual Environment Setup
-
-It is strongly recommended to use a virtual environment.
-
-**Linux**
-
-```shell
-python -m pip install virtualenv
-python -m virtualenv $HOME/.venv/TSbench
-source $HOME/.venv/TSbench/bin/activate
-```
-
-**Windows (conda)**
-
-```shell
-conda create -n TSbench python=3.10 anaconda
-conda activate TSbench
-```
-
-**Jupyter integration**
-
-```shell
-python -m pip install ipykernel ipython
-python -m ipykernel install --name TSbench --user
-```
-
-### R Integration (Linux Only)
+## R Integration (Linux Only)
 
 TSbench can use R models (rGARCH) via `rpy2`. This requires R (≥ 4.5.0) and the CRAN packages `rugarch`, `rmgarch`, `MTS`, `jsonlite`. On Ubuntu, the default repositories ship an older R, so a recent R must be installed from CRAN first.
 
@@ -109,15 +86,19 @@ R -e 'install.packages(c("jsonlite","rugarch","rmgarch","MTS"), repos="https://c
 python -m pip install .[R]
 ```
 
-For the **complete step-by-step guide** — installing a recent R on Ubuntu, build dependencies, verifying the install, and troubleshooting (plus Arch/other distros) — see [Installing R support (rpy2)](https://francish-c.github.io/TSbench/installation.html).
+For the complete step-by-step guide on Ubuntu (plus Arch/other distros) see [Installing R support (rpy2)](https://francish-c.github.io/TSbench/installation.html).
 
 ## Running Tests
 
+For development, install the test dependencies, then run the suite from the package root:
+
 ```shell
-python -m pytest -x -s          # basic tests
-python -m pytest --run-R             # include R-dependent tests
-python -m pytest --run-all           # all tests
-python -m pytest --run-performance   # performance tests
+python -m pip install -e .[test]
+
+python -m pytest -x -s                # default suite (skips R + performance)
+python -m pytest --run-R              # also run R-dependent tests
+python -m pytest --run-performance    # also run performance tests
+python -m pytest --run-all            # everything
 ```
 
 ## Contributing

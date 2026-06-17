@@ -8,11 +8,21 @@ Quickstart
 Installation
 ------------
 
+See :doc:`installation` for dependency extras, R support, and alternative
+environment setups.
+
 #. Clone the package
 
    .. code:: shell
 
       git clone "https://github.com/FrancisH-C/TSbench"
+
+#. Create and activate a virtual environment
+
+   .. code:: shell
+
+      python -m venv .venv
+      source .venv/bin/activate
 
 #. Run the installation from the package root folder
 
