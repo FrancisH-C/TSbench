@@ -21,6 +21,7 @@ Contents
 
    Home <self>
    quickstart
+   installation
    examples
    more
    api

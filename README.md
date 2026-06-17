@@ -100,38 +100,16 @@ python -m ipykernel install --name TSbench --user
 
 ### R Integration (Linux Only)
 
-TSbench can use R models (rGARCH) via `rpy2`. This requires R and the following CRAN packages: `rugarch`, `rmgarch`, `MTS`, `jsonlite`.
+TSbench can use R models (rGARCH) via `rpy2`. This requires R (≥ 4.5.0) and the CRAN packages `rugarch`, `rmgarch`, `MTS`, `jsonlite`. On Ubuntu, the default repositories ship an older R, so a recent R must be installed from CRAN first.
 
-**Ubuntu:** the current `rpy2` requires **R ≥ 4.5.0**, but Ubuntu's default repositories ship an older R. Install a recent R by following the [CRAN apt repository instructions](https://cloud.r-project.org/bin/linux/ubuntu/).
-
-Then build and install the R packages,
-
-```shell
-sudo apt install -y r-base-dev libgmp-dev libmpfr-dev libnlopt-dev
-R -e 'install.packages(c("jsonlite","rugarch","rmgarch","MTS"), repos="https://cloud.r-project.org")'
-python -m pip install .[R]
-```
-
-**Arch Linux:** install the build toolchain, then either pull the packages from the AUR (`r-rugarch`, `r-rmgarch`, `r-mts`, `r-jsonlite`) or use the manual install below.
-
-```shell
-sudo pacman -S gcc-fortran tcl tk
-```
-
-**Manual install (any distro):** install R, then from a shell:
+The quick path, once a recent R is installed:
 
 ```shell
 R -e 'install.packages(c("jsonlite","rugarch","rmgarch","MTS"), repos="https://cloud.r-project.org")'
 python -m pip install .[R]
 ```
 
-If you already have an R library and the install fails with `package 'X' was found, but >= Y is required`, your existing CRAN packages are stale. Refresh them in your user library first:
-
-```shell
-R -e 'update.packages(ask=FALSE, repos="https://cloud.r-project.org", lib.loc=.libPaths()[1])'
-```
-
-To remove R support: `python -m pip uninstall rpy2`.
+For the **complete step-by-step guide** — installing a recent R on Ubuntu, build dependencies, verifying the install, and troubleshooting (plus Arch/other distros) — see [Installing R support (rpy2)](https://francish-c.github.io/TSbench/installation.html).
 
 ## Running Tests
 
