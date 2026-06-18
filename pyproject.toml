@@ -28,6 +28,7 @@ dependencies = [
     "matplotlib",
     "statsmodels",
     "scikit-learn",
+    "scipy",
     "joblib",
 ]
 
