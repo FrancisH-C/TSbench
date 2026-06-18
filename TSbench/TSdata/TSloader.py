@@ -327,6 +327,10 @@ class TSloader:
             if np.size(self.metadata.at[self.datatype, "split_pattern"]) != 0:
                 # split pattern already defined in metadata, do nothing
                 return
+            # Fresh datatype with no split_pattern: default to a single split
+            # so loaders (e.g. LoadersProcess / Experiment) have a usable
+            # split_pattern instead of an empty one.
+            split_pattern = np.array(["1"])
         # update split_pattern
         self.set_metadata(split_pattern=split_pattern)
 
@@ -1588,12 +1592,6 @@ class LoadersProcess:
 
         self.n_jobs = n_jobs
         self.process_split = process_split
-        self.process_df = process_df
-
-        if process_df is None:
-            def process_df(df: pd.DataFrame) -> pd.DataFrame:
-                return df
-
         self.process_df = process_df
 
         self.set_input_loaders(
