@@ -9,7 +9,10 @@ class Experiment:
     """Benchmarking pipeline.
 
     Stages: initialize, preprocess, generate, train, forecast, output.
-    Configured via a config object whose attributes map to pipeline stages.
+    Configured from a typed :class:`ExperimentConfig`; the config's
+    dataclasses (``general``/``generate``/``train``/``forecast``/``output``)
+    are read directly as the pipeline's stage definitions, while the built
+    ``LoadersProcess`` objects (runtime state) live on attributes.
 
     """
 
@@ -17,38 +20,49 @@ class Experiment:
         """Initialize Experiment from a configuration.
 
         Args:
-            config: Either an :class:`ExperimentConfig` (typed dataclass)
-                or a legacy object exposing ``general``, ``initialize``,
-                ``pre_process``, ``run_process``, ``generate``, ``train``,
-                ``forecast`` and ``output`` dict attributes.
+            config (ExperimentConfig): Typed experiment configuration. Its
+                stages are stored as attributes (``self.general``,
+                ``self.generate``, ...) and the pre-/run-/output
+                ``LoadersProcess`` objects are built on attributes
+                (``self._pre_process``, ``self._run_process``,
+                ``self._output_process``).
+
+        Raises:
+            TypeError: If ``config`` is not an :class:`ExperimentConfig`.
 
         """
-        if isinstance(config, ExperimentConfig):
-            config = config.to_dicts()
-        self.set_general(config.general)
-        self.set_initialize(config.initialize)
-        self.set_pre_process(config.pre_process)
-        self.set_run_process(config.run_process)
-        self.set_generate(config.generate)
-        self.set_train(config.train)
-        self.set_forecast(config.forecast)
-        self.set_output(config.output)
+        if not isinstance(config, ExperimentConfig):
+            raise TypeError(
+                f"Experiment requires an ExperimentConfig; got {type(config).__name__}."
+            )
+        self.config = config
+        self.general = config.general
+        self.generate = config.generate
+        self.train = config.train
+        self.forecast = config.forecast
+        self.output = config.output
+        self.initialize = config.initialize or self._default_initialize()
 
-    def set_general(self, general):
-        """Set the general configuration (paths, n_jobs, datatype, etc.).
-
-        Args:
-            general (dict): General experiment parameters.
-
-        """
-        self.general = general
         self._configure_device()
+        self._pre_process = self._build_process(config.pre_process)
+        self._run_process = self._build_process(config.run_process)
+        self._output_loader, self._output_process = self._build_output_process()
+
+    def _default_initialize(self):
+        """Build the default dataset-restart initialize callable."""
+        datatype = self.general.datatype
+        path = self.general.data_path
+
+        def initialize():
+            LoaderTSdf(datatype=datatype, path=path).restart_dataset()
+
+        return initialize
 
     def _configure_device(self):
         """Apply device configuration from ``self.general``."""
         import os
 
-        device = self.general.get("device")
+        device = self.general.device
         if device is None:
             return
         device = device.lower().strip()
@@ -59,176 +73,74 @@ class Experiment:
             gpu_id = parts[1] if len(parts) > 1 else "0"
             os.environ["CUDA_VISIBLE_DEVICES"] = gpu_id
 
-    def set_initialize(self, initialize):
-        """Set the initialization stage configuration.
+    def _build_process(self, process):
+        """Build a ``LoadersProcess`` for a pre-/run-process stage.
 
         Args:
-            initialize (dict): Must contain a ``'function'`` key with a
-                callable that sets up the dataset.
+            process (Process | None): Advanced stage config, or ``None`` for
+                the default (no per-DataFrame / per-split transform, a fresh
+                output loader at ``data_path``).
+
+        Returns:
+            LoadersProcess: Process bound to ``self.general``'s paths and
+            parallelism options.
 
         """
-        self.initialize = initialize
-
-    def set_pre_process(self, pre_process):
-        """Set the pre-processing stage configuration.
-
-        Builds a ``LoadersProcess`` from the config if one is not provided
-        under the ``'process'`` key.
-
-        Args:
-            pre_process (dict): Pre-processing parameters.
-
-        """
-        self.pre_process = pre_process
-
-        # define process from other inputs
-        if "process" not in self.pre_process:
-            if "output_loader" not in self.pre_process:
-                self.pre_process["output_loader"] = LoaderTSdf(
-                    datatype=self.general["datatype"], path=self.general["data_path"]
-                )
-            if "process_df" not in self.pre_process:
-                self.pre_process["process_df"] = None
-
-            if "process_split" not in self.pre_process:
-                self.pre_process["process_split"] = None
-
-            pre_process_process = LoadersProcess(
-                data_path=self.general["data_path"],
-                datatype=self.general["datatype"],
-                output_loader=self.pre_process["output_loader"],
-                n_jobs=self.general["n_jobs"],
-                n_input_loaders=self.general["n_input_loaders"],
-                process_df=self.pre_process["process_df"],
-                process_split=self.pre_process["process_split"],
+        process_df = process.process_df if process is not None else None
+        process_split = process.process_split if process is not None else None
+        output_loader = process.output_loader if process is not None else None
+        if output_loader is None:
+            output_loader = LoaderTSdf(
+                datatype=self.general.datatype, path=self.general.data_path
             )
-            self.pre_process["process"] = pre_process_process
+        return LoadersProcess(
+            data_path=self.general.data_path,
+            datatype=self.general.datatype,
+            output_loader=output_loader,
+            n_jobs=self.general.n_jobs,
+            n_input_loaders=self.general.n_input_loaders,
+            process_df=process_df,
+            process_split=process_split,
+        )
 
-    def set_run_process(self, run_process):
-        """Set the main run-process stage configuration.
+    def _build_output_process(self):
+        """Build the output loader and its ``LoadersProcess``.
 
-        Builds a ``LoadersProcess`` from the config if one is not provided
-        under the ``'process'`` key.
+        The output loader is written to ``output_path`` (which defaults to
+        ``data_path``) and is reused by ``_evaluate_metrics`` and
+        ``get_output_loader``.
 
-        Args:
-            run_process (dict): Run-process parameters.
+        Returns:
+            tuple: ``(output_loader, output_process)``.
 
         """
-        self.run_process = run_process
-
-        # define process from other inputs
-        if "process" not in self.run_process:
-            if "output_loader" not in self.run_process:
-                self.run_process["output_loader"] = LoaderTSdf(
-                    datatype=self.general["datatype"], path=self.general["data_path"]
-                )
-            if "process_df" not in self.run_process:
-                self.run_process["process_df"] = None
-
-            if "process_split" not in self.run_process:
-                self.run_process["process_split"] = None
-
-            run_process_process = LoadersProcess(
-                data_path=self.general["data_path"],
-                datatype=self.general["datatype"],
-                output_loader=self.run_process["output_loader"],
-                n_jobs=self.general["n_jobs"],
-                n_input_loaders=self.general["n_input_loaders"],
-                process_df=self.run_process["process_df"],
-                process_split=self.run_process["process_split"],
+        output = self.output
+        output_loader = output.output_loader
+        if output_loader is None:
+            output_loader = LoaderTSdf(
+                datatype=self.general.datatype, path=self.general.output_path
             )
-            self.run_process["process"] = run_process_process
-
-    def set_generate(self, generate):
-        """Set the generation stage configuration.
-
-        Args:
-            generate (dict): Must contain ``'models'`` and ``'params'`` keys.
-
-        """
-        self.generate = generate
-        if "input_loaders_params" not in self.generate:
-            self.generate["input_loaders_params"] = {}
-        if "ID-wise" not in self.generate:
-            self.generate["ID-wise"] = False
-
-    def set_train(self, train):
-        """Set the training stage configuration.
-
-        Args:
-            train (dict): Must contain ``'models'`` and optionally ``'params'``.
-
-        """
-        self.train = train
-        if "params" not in self.train:
-            self.train["params"] = {}
-        if "input_loaders_params" not in self.train:
-            self.train["input_loaders_params"] = {}
-        if "rolling_window" not in self.train:
-            self.train["rolling_window"] = None
-
-    def set_forecast(self, forecast):
-        """Set the forecasting stage configuration.
-
-        Args:
-            forecast (dict): Must contain ``'models'`` and ``'params'`` keys.
-
-        """
-        self.forecast = forecast
-        if "input_loaders_params" not in self.forecast:
-            self.forecast["input_loaders_params"] = {}
-
-    def set_output(self, output):
-        """Set the output stage configuration.
-
-        Builds a ``LoadersProcess`` from the config if one is not provided
-        under the ``'process'`` key.
-
-        If a ``"metrics"`` key is present, it should be a list of callables
-        with signature ``(y_true, y_pred) -> float``. These are applied
-        automatically during the output stage to each forecast feature.
-
-        Args:
-            output (dict): Output parameters.
-
-        """
-        self.output = output
-        if "metrics" not in self.output:
-            self.output["metrics"] = None
-
-        # define process from other inputs
-        if "process" not in self.output:
-            if "output_loader" not in self.output:
-                self.output["output_loader"] = LoaderTSdf(
-                    datatype=self.general["datatype"], path=self.general["output_path"]
-                )
-            if "process_df" not in self.output:
-                self.output["process_df"] = None
-
-            if "process_split" not in self.output:
-                self.output["process_split"] = None
-
-            output_process = LoadersProcess(
-                data_path=self.general["data_path"],
-                datatype=self.general["datatype"],
-                output_loader=self.output["output_loader"],
-                n_jobs=self.general["n_jobs"],
-                n_input_loaders=self.general["n_input_loaders"],
-                process_df=self.output["process_df"],
-                process_split=self.output["process_split"],
-            )
-            self.output["process"] = output_process
+        process = LoadersProcess(
+            data_path=self.general.data_path,
+            datatype=self.general.datatype,
+            output_loader=output_loader,
+            n_jobs=self.general.n_jobs,
+            n_input_loaders=self.general.n_input_loaders,
+            process_df=output.process_df,
+            process_split=output.process_split,
+        )
+        return output_loader, process
 
     def configure_run_models(self, generate, train, forecast, write=True):
         """Build a closure that runs generate/train/forecast on a loader.
 
         The returned closure matches the ``process_split`` signature expected
         by ``LoadersProcess``: it takes a single ``input_loader`` argument.
-        The output loader is accessed from ``self.run_process``.
+        The output loader is the run-process loader (``self._run_process``).
 
-        If ``self.train["rolling_window"]`` is set, training uses a rolling
+        If ``self.train.rolling_window`` is set, training uses a rolling
         window over IDs (days) instead of training independently per ID.
-        See ``_rolling_window_train`` for details.
+        See ``_rolling_window_train_forecast`` for details.
 
         Args:
             generate (bool): Whether to run the generation step.
@@ -240,30 +152,28 @@ class Experiment:
             Callable: A function ``(input_loader) -> None``.
 
         """
-        output_loader = self.run_process["process"].output_loader
+        output_loader = self._run_process.output_loader
 
         def run_models(input_loader):
             if generate:
-                for model in self.generate["models"]:
-                    if self.generate["ID-wise"]:
+                for model in self.generate.models:
+                    if self.generate.id_wise:
                         for ID in input_loader.get_IDs():
                             df = input_loader.get_df(
-                                IDs=ID, **self.generate["input_loaders_params"]
+                                IDs=ID, **self.generate.input_loaders_params
                             )
                             model.set_data(df)
-                            model.generate(**self.generate["params"])
+                            model.generate(**self.generate.params)
                             model.register_data(input_loader)
                             model.register_data(output_loader)
                     else:
-                        df = input_loader.get_df(
-                            **self.generate["input_loaders_params"]
-                        )
+                        df = input_loader.get_df(**self.generate.input_loaders_params)
                         model.set_data(df)
-                        model.generate(**self.generate["params"])
+                        model.generate(**self.generate.params)
                         model.register_data(input_loader)
                         model.register_data(output_loader)
 
-            rolling_window = self.train.get("rolling_window")
+            rolling_window = self.train.rolling_window
 
             if rolling_window is not None and (train or forecast):
                 self._rolling_window_train_forecast(
@@ -273,19 +183,19 @@ class Experiment:
                 # Standard per-ID train/forecast
                 for ID in input_loader.get_IDs():
                     if train:
-                        for model in self.train["models"]:
+                        for model in self.train.models:
                             df = input_loader.get_df(
-                                IDs=ID, **self.train["input_loaders_params"]
+                                IDs=ID, **self.train.input_loaders_params
                             )
                             model.set_data(df)
-                            model.train(**self.train["params"])
+                            model.train(**self.train.params)
                     if forecast:
-                        for model in self.forecast["models"]:
+                        for model in self.forecast.models:
                             df = input_loader.get_df(
-                                IDs=ID, **self.forecast["input_loaders_params"]
+                                IDs=ID, **self.forecast.input_loaders_params
                             )
                             model.set_data(df)
-                            model.forecast(**self.forecast["params"])
+                            model.forecast(**self.forecast.params)
                             model.register_data(
                                 output_loader,
                                 append_to_feature=str(model),
@@ -346,7 +256,7 @@ class Experiment:
 
         # Reset models at the start of each split (stock)
         if reset_per_split:
-            for model in self.train.get("models", []):
+            for model in self.train.models:
                 if hasattr(model, "build_model"):
                     model.model = model.build_model()
 
@@ -356,13 +266,13 @@ class Experiment:
             test_IDs = IDs[start + train_size + val_size : start + window_size]
 
             if train:
-                for model in self.train["models"]:
+                for model in self.train.models:
                     # Collect training data from all train IDs
                     train_dfs = []
                     skip = False
                     for ID in train_IDs:
                         df = input_loader.get_df(
-                            IDs=ID, **self.train["input_loaders_params"]
+                            IDs=ID, **self.train.input_loaders_params
                         )
                         if min_rows > 0 and df.shape[0] < min_rows:
                             skip = True
@@ -375,7 +285,7 @@ class Experiment:
                     val_dfs = []
                     for ID in val_IDs:
                         df = input_loader.get_df(
-                            IDs=ID, **self.train["input_loaders_params"]
+                            IDs=ID, **self.train.input_loaders_params
                         )
                         if min_rows > 0 and df.shape[0] < min_rows:
                             skip = True
@@ -387,7 +297,7 @@ class Experiment:
                     # Check test data availability
                     for ID in test_IDs:
                         df = input_loader.get_df(
-                            IDs=ID, **self.train["input_loaders_params"]
+                            IDs=ID, **self.train.input_loaders_params
                         )
                         if min_rows > 0 and df.shape[0] < min_rows:
                             skip = True
@@ -408,18 +318,18 @@ class Experiment:
                         else:
                             model.set_validation_data(pd.concat(val_dfs))
 
-                    model.train(**self.train["params"])
+                    model.train(**self.train.params)
 
             if forecast:
-                for model in self.forecast["models"]:
+                for model in self.forecast.models:
                     for ID in test_IDs:
                         df = input_loader.get_df(
-                            IDs=ID, **self.forecast["input_loaders_params"]
+                            IDs=ID, **self.forecast.input_loaders_params
                         )
                         if min_rows > 0 and df.shape[0] < min_rows:
                             continue
                         model.set_data(df)
-                        model.forecast(**self.forecast["params"])
+                        model.forecast(**self.forecast.params)
                         model.register_data(
                             output_loader,
                             append_to_feature=str(model),
@@ -451,13 +361,14 @@ class Experiment:
         if any(v is not None for v in raw.values()):
             return {k: bool(v) for k, v in raw.items()}
 
+        pre = self.config.pre_process
         return {
-            "initialize": self.initialize.get("function") is not None,
-            "pre_process": self.pre_process.get("process_df") is not None
-            or self.pre_process.get("process_split") is not None,
-            "generate": bool(self.generate.get("models")),
-            "train": bool(self.train.get("models")),
-            "forecast": bool(self.forecast.get("models")),
+            "initialize": self.initialize is not None,
+            "pre_process": pre is not None
+            and (pre.process_df is not None or pre.process_split is not None),
+            "generate": bool(self.generate.models),
+            "train": bool(self.train.models),
+            "forecast": bool(self.forecast.models),
             "output": True,
         }
 
@@ -490,21 +401,21 @@ class Experiment:
         )
 
         if stages["initialize"]:
-            self.initialize["function"]()
+            self.initialize()
 
         if stages["pre_process"]:
-            self.pre_process["process"].run_process(write=True)
+            self._pre_process.run_process(write=True)
 
         if stages["generate"] or stages["train"] or stages["forecast"]:
             run_models = self.configure_run_models(
                 stages["generate"], stages["train"], stages["forecast"], write=True
             )
-            self.run_process["process"].process_split = run_models
-            self.run_process["process"].run_process(write=True)
+            self._run_process.process_split = run_models
+            self._run_process.run_process(write=True)
 
         if stages["output"]:
-            self.output["process"].reload()
-            self.output["process"].run_process(write=True)
+            self._output_process.reload()
+            self._output_process.run_process(write=True)
             self._results = self._evaluate_metrics()
 
     def compute_metrics(self, y_true, y_pred):
@@ -519,7 +430,7 @@ class Experiment:
             dict if no metrics are configured.
 
         """
-        metrics_fns = self.output.get("metrics")
+        metrics_fns = self.output.metrics
         if not metrics_fns:
             return {}
         results = {}
@@ -540,17 +451,11 @@ class Experiment:
             or empty dict if no metrics are configured.
 
         """
-        metrics_fns = self.output.get("metrics")
+        metrics_fns = self.output.metrics
         if not metrics_fns:
             return {}
 
-        output_loader = self.output.get("output_loader")
-        if output_loader is None:
-            output_loader = self.output.get("process", {})
-            if hasattr(output_loader, "output_loader"):
-                output_loader = output_loader.output_loader
-            else:
-                return {}
+        output_loader = self._output_loader
 
         results = {}
         try:
@@ -600,4 +505,4 @@ class Experiment:
 
     def get_output_loader(self):
         """Return the output loader containing experiment results."""
-        return self.output["output_loader"]
+        return self._output_loader
