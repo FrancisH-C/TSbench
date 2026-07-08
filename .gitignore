@@ -5,12 +5,9 @@
 *.json
 *.csv
 temp-plot.html
-data/
-subset_data/
-examples/
+**/data/
+**/subset_data/
 notebooks/*/experiments/*
-notebooks/*/data/*
-notebooks/*/subset_data/*
 scripts/experiments/*
 
 # Byte-compiled / optimized / DLL files
