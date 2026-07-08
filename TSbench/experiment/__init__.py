@@ -3,6 +3,7 @@ from TSbench.experiment.config import (
     ExperimentConfig,
     General,
     Stage,
+    RollingWindow,
     Process,
     Output,
 )
@@ -12,6 +13,7 @@ __all__ = [
     "ExperimentConfig",
     "General",
     "Stage",
+    "RollingWindow",
     "Process",
     "Output",
 ]

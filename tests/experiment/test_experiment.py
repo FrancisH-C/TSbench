@@ -13,7 +13,15 @@ import numpy as np
 import pytest
 from numpy.random import Generator, PCG64
 
-from TSbench.experiment import Experiment, ExperimentConfig, General, Stage, Output
+from TSbench.experiment import (
+    Experiment,
+    ExperimentConfig,
+    General,
+    Stage,
+    RollingWindow,
+    Output,
+)
+from TSbench.metrics import mae, rmse
 from TSbench.TSdata.TSloader import LoaderTSdf
 from TSbench.TSmodels import Constant, ARMA, VEC_SPD_GARCH
 
@@ -29,7 +37,7 @@ def _make_config(
     models_forecast,
     n_jobs=1,
     n_input_loaders=1,
-    rolling_window=None,
+    rolling=None,
     metrics=None,
     device=None,
     id_wise=False,
@@ -43,7 +51,7 @@ def _make_config(
             device=device,
         ),
         generate=Stage(models=models_generate, params={"N": 20}, id_wise=id_wise),
-        train=Stage(models=models_train, rolling_window=rolling_window),
+        train=Stage(models=models_train, rolling=rolling),
         forecast=Stage(models=models_forecast, params={"T": 5}),
         output=Output(metrics=metrics),
     )
@@ -393,20 +401,22 @@ class TestExperimentRollingWindow:
                 feature_label=feature_label,
             )
 
-            rolling_window = {
-                "train_size": 1,
-                "val_size": 1,
-                "test_size": 1,
-                "step_size": 1,
-                "reset_per_split": True,
-            }
+            rolling = [
+                RollingWindow(
+                    axis="ID",
+                    train_size=1,
+                    val_size=1,
+                    test_size=1,
+                    step_size=1,
+                )
+            ]
 
             cfg = _make_config(
                 self.DATA_PATH,
                 models_generate=[],
                 models_train=[cnst_train],
                 models_forecast=[cnst_train],
-                rolling_window=rolling_window,
+                rolling=rolling,
             )
             # Don't re-initialize — data already set up
             exp = Experiment(cfg)
@@ -427,20 +437,23 @@ class TestExperimentRollingWindow:
                 feature_label=feature_label,
             )
 
-            rolling_window = {
-                "train_size": 1,
-                "val_size": 1,
-                "test_size": 1,
-                "step_size": 1,
-                "min_rows": 5,
-            }
+            rolling = [
+                RollingWindow(
+                    axis="ID",
+                    train_size=1,
+                    val_size=1,
+                    test_size=1,
+                    step_size=1,
+                    min_rows=5,
+                )
+            ]
 
             cfg = _make_config(
                 self.DATA_PATH,
                 models_generate=[],
                 models_train=[cnst_train],
                 models_forecast=[cnst_train],
-                rolling_window=rolling_window,
+                rolling=rolling,
             )
             exp = Experiment(cfg)
             exp.run(train=True, forecast=True)
@@ -461,18 +474,21 @@ class TestExperimentRollingWindow:
                 feature_label=feature_label,
             )
 
-            rolling_window = {
-                "train_size": 1,
-                "val_size": 1,
-                "test_size": 1,
-            }
+            rolling = [
+                RollingWindow(
+                    axis="ID",
+                    train_size=1,
+                    val_size=1,
+                    test_size=1,
+                )
+            ]
 
             cfg = _make_config(
                 self.DATA_PATH,
                 models_generate=[],
                 models_train=[cnst_train],
                 models_forecast=[cnst_train],
-                rolling_window=rolling_window,
+                rolling=rolling,
             )
             exp = Experiment(cfg)
             # Should complete without error (early return)
@@ -493,23 +509,142 @@ class TestExperimentRollingWindow:
                 feature_label=feature_label,
             )
 
-            rolling_window = {
-                "train_size": 2,
-                "val_size": 1,
-                "test_size": 1,
-                "step_size": 1,
-                "reset_per_split": False,
-            }
+            rolling = [
+                RollingWindow(
+                    axis="ID",
+                    train_size=2,
+                    val_size=1,
+                    test_size=1,
+                    step_size=1,
+                )
+            ]
 
             cfg = _make_config(
                 self.DATA_PATH,
                 models_generate=[],
                 models_train=[cnst_train],
                 models_forecast=[cnst_train],
-                rolling_window=rolling_window,
+                rolling=rolling,
             )
             exp = Experiment(cfg)
             exp.run(train=True, forecast=True)
+        finally:
+            _cleanup(self.DATA_PATH)
+
+    def test_rolling_window_timestamp_axis(self):
+        """Timestamp-axis walk-forward: forecasts land on held-out timestamps,
+        so metrics pair and ``results`` populate."""
+        try:
+            cnst = Constant(
+                rg=Generator(PCG64(7)),
+                dim_label=["first"],
+                feature_label=["feature"],
+            )
+            rolling = [
+                RollingWindow(
+                    axis="timestamp",
+                    train_size=30,
+                    val_size=10,
+                    test_size=10,
+                    step_size=10,
+                )
+            ]
+            cfg = ExperimentConfig(
+                general=General(data_path=self.DATA_PATH, n_jobs=1),
+                generate=Stage(models=[cnst], params={"N": 60}),
+                train=Stage(models=[cnst], rolling=rolling),
+                forecast=Stage(models=[cnst]),
+                output=Output(metrics=[mae, rmse]),
+            )
+            exp = Experiment(cfg)
+            exp.run()  # auto-detect: initialize + generate + train + forecast + output
+
+            # Walk-forward forecasts overlap the actuals -> non-empty results.
+            assert exp.results
+            metric_dicts = [
+                scores
+                for models in exp.results.values()
+                for scores in models.values()
+            ]
+            assert metric_dicts
+            assert all(
+                "mae" in scores and "rmse" in scores for scores in metric_dicts
+            )
+        finally:
+            _cleanup(self.DATA_PATH)
+
+    def test_rolling_window_timestamp_expanding(self):
+        """Expanding timestamp window runs and produces paired results."""
+        try:
+            cnst = Constant(
+                rg=Generator(PCG64(3)),
+                dim_label=["first"],
+                feature_label=["feature"],
+            )
+            rolling = [
+                RollingWindow(
+                    axis="timestamp",
+                    train_size=10,
+                    val_size=0,
+                    test_size=5,
+                    step_size=5,
+                    expanding=True,
+                )
+            ]
+            cfg = ExperimentConfig(
+                general=General(data_path=self.DATA_PATH, n_jobs=1),
+                generate=Stage(models=[cnst], params={"N": 60}),
+                train=Stage(models=[cnst], rolling=rolling),
+                forecast=Stage(models=[cnst]),
+                output=Output(metrics=[mae, rmse]),
+            )
+            exp = Experiment(cfg)
+            exp.run()
+            assert exp.results
+        finally:
+            _cleanup(self.DATA_PATH)
+
+    def test_rolling_window_nested_id_timestamp(self):
+        """Nested roll: train per day (ID), forecast within each test day
+        (timestamp axis, frozen model via retrain=False) -> results populate."""
+        try:
+            self._setup_multi_id_data(self.DATA_PATH, n_ids=4, N=12)
+            cnst = Constant(
+                rg=Generator(PCG64(7)),
+                dim_label=["first"],
+                feature_label=["feature"],
+            )
+            rolling = [
+                RollingWindow(
+                    axis="ID", train_size=2, val_size=0, test_size=1,
+                    step_size=1, retrain=True,
+                ),
+                RollingWindow(
+                    axis="timestamp", train_size=4, val_size=0, test_size=1,
+                    step_size=1, retrain=False, expanding=True,
+                ),
+            ]
+            cfg = ExperimentConfig(
+                general=General(data_path=self.DATA_PATH, n_jobs=1),
+                generate=Stage(models=[]),
+                train=Stage(models=[cnst], rolling=rolling),
+                forecast=Stage(models=[cnst]),
+                output=Output(metrics=[mae, rmse]),
+            )
+            exp = Experiment(cfg)
+            # Data is pre-set up; run train+forecast+output (no initialize/generate).
+            exp.run(train=True, forecast=True, output=True)
+
+            assert exp.results
+            metric_dicts = [
+                scores
+                for models in exp.results.values()
+                for scores in models.values()
+            ]
+            assert metric_dicts
+            assert all(
+                "mae" in scores and "rmse" in scores for scores in metric_dicts
+            )
         finally:
             _cleanup(self.DATA_PATH)
 

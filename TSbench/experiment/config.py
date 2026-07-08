@@ -55,6 +55,95 @@ class General:
 
 
 @dataclass
+class RollingWindow:
+    """One sliding-window level along an index axis.
+
+    The dataset frame is indexed by ``(ID, timestamp, dim)``. A rolling level
+    fixes two of those levels and slides a window along the third (``axis``),
+    splitting the ordered values into consecutive train / validation / test
+    slices and stepping forward by ``step_size``. Levels are composed as a list
+    on ``Stage.rolling`` (see :class:`Stage`); the list order is the nesting
+    order.
+
+    The supported axes are ``"ID"`` and ``"timestamp"``:
+
+    - ``axis="ID"``: roll over IDs — train on some series, forecast held-out
+      series (cross-series). For a leaf (last) level, ``Experiment`` applies the
+      trained model to each test ID's own data using the forecast stage's
+      ``params``.
+    - ``axis="timestamp"``: walk-forward within each ID — train on early
+      timestamps, forecast the next ``test_size`` timestamps. The forecast
+      horizon is ``test_size`` (derived from the window, not the forecast
+      stage's ``params``); forecasts land on the held-out timestamps so the
+      metrics pair against the ground truth.
+
+    ``dim`` is intentionally **not** a rolling axis: rolling on it would mean
+    predicting held-out dimensions from observed ones (a cross-sectional
+    operation), which is outside the temporal ``forecast(T)`` contract every
+    model implements (models fix ``dim`` at construction and forecast all of
+    their dimensions jointly, forward in time).
+
+    Training window sizing (``expanding`` toggle):
+
+    - ``expanding=False`` (default): a fixed window of ``train_size`` values
+      immediately before the validation/test slices (sliding window).
+    - ``expanding=True``: the window grows from the start of the available
+      values, capped at ``max_train_size`` (``None`` = unbounded). Forecasting
+      starts once at least ``min_window_size`` (``None`` → ``train_size``)
+      values are available.
+
+    Args:
+        axis: Index level to roll along, ``"ID"`` or ``"timestamp"``.
+        train_size: Base/initial number of axis values used for training.
+        val_size: Number of axis values used for validation per window
+            (``0`` = no validation; passed to ``set_validation_data`` when the
+            model supports it).
+        test_size: Number of axis values forecast per window.
+        step_size: How far the window advances each step.
+        retrain: Whether to (re)fit the model at each window. ``False`` freezes
+            the model (no fit, no weight rebuild) and only forecasts — used by a
+            deeper level to reuse the model an outer level trained.
+        expanding: Grow the training window instead of using a fixed size.
+        max_train_size: Cap on the training window when ``expanding`` (``None``
+            = unbounded); ignored when not expanding.
+        min_window_size: Minimum training length before the first forecast
+            (``None`` → ``train_size``).
+        min_rows: Skip a slice whose row count is below this (0 = no filter).
+
+    """
+
+    axis: str = "ID"
+    train_size: int = 1
+    val_size: int = 1
+    test_size: int = 1
+    step_size: int = 1
+    retrain: bool = True
+    expanding: bool = False
+    max_train_size: Optional[int] = None
+    min_window_size: Optional[int] = None
+    min_rows: int = 0
+
+    def __post_init__(self) -> None:
+        if self.axis not in ("ID", "timestamp"):
+            raise ValueError(
+                "RollingWindow.axis must be 'ID' or 'timestamp'. Rolling on "
+                "'dim' would require cross-sectional forecasting (predicting "
+                "held-out dimensions from observed ones), which the models do "
+                "not provide."
+            )
+        if min(self.train_size, self.test_size, self.step_size) < 1:
+            raise ValueError(
+                "RollingWindow train_size/test_size/step_size must be >= 1."
+            )
+        if self.val_size < 0:
+            raise ValueError("RollingWindow val_size must be >= 0.")
+        for name in ("max_train_size", "min_window_size"):
+            value = getattr(self, name)
+            if value is not None and value < 1:
+                raise ValueError(f"RollingWindow.{name}, when set, must be >= 1.")
+
+
+@dataclass
 class Stage:
     """A generate / train / forecast stage.
 
@@ -64,8 +153,11 @@ class Stage:
             ``forecast`` (e.g. ``{"N": 100}`` or ``{"T": 10}``).
         input_loaders_params: Extra kwargs for ``input_loader.get_df``.
         id_wise: Generate once per ID (generation stage only).
-        rolling_window: Rolling-window config (training stage only); see
-            ``Experiment._rolling_window_train_forecast``.
+        rolling: List of :class:`RollingWindow` levels (training stage only).
+            **The order of the list is the order of nesting**: the first entry
+            is the outermost roll, and each later entry rolls within the test
+            units of the entry before it. A single-level roll is a one-element
+            list. See ``Experiment._rolling_window``.
 
     """
 
@@ -73,13 +165,21 @@ class Stage:
     params: dict = field(default_factory=dict)
     input_loaders_params: dict = field(default_factory=dict)
     id_wise: bool = False
-    rolling_window: Optional[dict] = None
+    rolling: Optional[list[RollingWindow]] = None
 
     def __post_init__(self) -> None:
         if not isinstance(self.models, list):
             raise ValueError("Stage.models must be a list of models.")
         if not isinstance(self.params, dict):
             raise ValueError("Stage.params must be a dict.")
+        if self.rolling is not None:
+            if not isinstance(self.rolling, list) or not self.rolling:
+                raise ValueError(
+                    "Stage.rolling must be a non-empty list of RollingWindow "
+                    "(outermost first)."
+                )
+            if not all(isinstance(r, RollingWindow) for r in self.rolling):
+                raise ValueError("Stage.rolling entries must be RollingWindow.")
 
 
 @dataclass
@@ -154,3 +254,17 @@ class ExperimentConfig:
     initialize: Optional[Callable] = None
     pre_process: Optional[Process] = None
     run_process: Optional[Process] = None
+
+    def __post_init__(self) -> None:
+        rolling = self.train.rolling
+        if (
+            rolling is not None
+            and any(level.axis == "timestamp" for level in rolling)
+            and "T" in self.forecast.params
+        ):
+            raise ValueError(
+                "forecast stage params must not set 'T' when any train.rolling "
+                "level rolls on the 'timestamp' axis: the forecast horizon is "
+                "derived from that level's test_size, so a forecast 'T' would "
+                "be silently ignored."
+            )

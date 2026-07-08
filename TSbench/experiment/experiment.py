@@ -1,5 +1,3 @@
-import pandas as pd
-
 from TSbench.TSdata.TSloader import LoaderTSdf, LoadersProcess
 from TSbench.experiment.config import ExperimentConfig
 import numpy as np
@@ -138,9 +136,9 @@ class Experiment:
         by ``LoadersProcess``: it takes a single ``input_loader`` argument.
         The output loader is the run-process loader (``self._run_process``).
 
-        If ``self.train.rolling_window`` is set, training uses a rolling
-        window over IDs (days) instead of training independently per ID.
-        See ``_rolling_window_train_forecast`` for details.
+        If ``self.train.rolling`` is set, training/forecasting use a sliding
+        window along one index axis (ID or timestamp) instead of training
+        independently per ID. See ``_rolling_window`` for details.
 
         Args:
             generate (bool): Whether to run the generation step.
@@ -173,11 +171,11 @@ class Experiment:
                         model.register_data(input_loader)
                         model.register_data(output_loader)
 
-            rolling_window = self.train.rolling_window
+            rolling = self.train.rolling
 
-            if rolling_window is not None and (train or forecast):
-                self._rolling_window_train_forecast(
-                    input_loader, output_loader, rolling_window, train, forecast
+            if rolling and (train or forecast):
+                self._rolling_window(
+                    input_loader, output_loader, rolling, 0, train, forecast
                 )
             else:
                 # Standard per-ID train/forecast
@@ -206,135 +204,188 @@ class Experiment:
 
         return run_models
 
-    def _rolling_window_train_forecast(
-        self, input_loader, output_loader, rolling_window, train, forecast
+    def _axis_values(self, input_loader, axis, unit=None, scope_ids=None):
+        """Sorted unique values along the rolling ``axis``.
+
+        For ``axis="ID"`` returns the IDs (restricted to ``scope_ids`` when
+        given); for ``axis="timestamp"`` returns the timestamps of the single ID
+        ``unit``.
+        """
+        if axis == "ID":
+            ids = list(input_loader.get_IDs())
+            if scope_ids is not None:
+                scope = set(scope_ids)
+                ids = [i for i in ids if i in scope]
+            return ids
+        return list(input_loader.get_timestamp(IDs=np.array([unit]), unique=True))
+
+    def _iter_windows(self, values, rolling):
+        """Yield ``(train_vals, val_vals, test_vals)`` for each window position.
+
+        Honors fixed vs expanding training windows (see :class:`RollingWindow`):
+        the test slice slides by ``step_size``; the train slice is the
+        ``train_size`` values before the validation slice (fixed) or grows from
+        the start capped at ``max_train_size`` (expanding), starting once at
+        least ``min_window_size`` (default ``train_size``) values are available.
+        """
+        n = len(values)
+        train_size = rolling.train_size
+        val_size = rolling.val_size
+        test_size = rolling.test_size
+        min_window = rolling.min_window_size or train_size
+
+        first = (min_window if rolling.expanding else train_size) + val_size
+        for test_start in range(first, n - test_size + 1, rolling.step_size):
+            test_vals = values[test_start : test_start + test_size]
+            val_start = test_start - val_size
+            val_vals = values[val_start:test_start]
+            if rolling.expanding:
+                if rolling.max_train_size is None:
+                    train_lo = 0
+                else:
+                    train_lo = max(0, val_start - rolling.max_train_size)
+            else:
+                train_lo = val_start - train_size
+            if train_lo < 0:
+                continue
+            train_vals = values[train_lo:val_start]
+            if len(train_vals) < min_window:
+                continue
+            yield train_vals, val_vals, test_vals
+
+    def _rolling_window(
+        self, input_loader, output_loader, levels, level, train, forecast,
+        scope_ids=None,
     ):
-        """Execute rolling-window train/val/test across IDs within a split.
+        """Nested sliding-window train/forecast along the configured axes.
 
-        Slides a window of size ``train_size + val_size + test_size`` across
-        the sorted list of IDs (typically trading days). For each window
-        position:
+        ``levels`` is the ``Stage.rolling`` list (outermost first). This
+        processes ``levels[level]``: it slides windows along that level's axis,
+        (re)fits the train-stage models on each training slice when ``retrain``
+        is set, and for each test slice either forecasts directly (the last
+        level) or recurses into the next level restricted to that test slice's
+        IDs. The model is shared across levels, so a deeper level with
+        ``retrain=False`` forecasts with the model an outer level trained (use
+        the same model instance in the train and forecast stages).
 
-        - The first ``train_size`` IDs are used for training.
-        - The next ``val_size`` IDs are used for validation.
-        - The last ``test_size`` IDs are used for testing (forecast).
-
-        Models that support validation data (via ``set_validation_data``)
-        will receive it automatically. Models are rebuilt at the start of
-        each split via ``build_model()`` if ``reset_per_split`` is True
-        (default).
+        See :class:`RollingWindow` for axis and window-sizing semantics.
 
         Args:
-            input_loader: The input loader for the current split (stock).
-            output_loader: The output loader for writing forecasts.
-            rolling_window (dict): Rolling window configuration with keys:
-
-                - ``train_size`` (int): Number of IDs for training. Default 1.
-                - ``val_size`` (int): Number of IDs for validation. Default 1.
-                - ``test_size`` (int): Number of IDs for testing. Default 1.
-                - ``step_size`` (int): Step size for sliding. Default 1.
-                - ``min_rows`` (int): Skip IDs with fewer rows. Default 0.
-                - ``reset_per_split`` (bool): Rebuild model weights at the
-                  start of each split (stock). Default True.
-
+            input_loader: Input loader for the current split.
+            output_loader: Output loader for writing forecasts.
+            levels (list[RollingWindow]): The nesting (outermost first).
+            level (int): Index of the level being processed.
             train (bool): Whether to run training.
             forecast (bool): Whether to run forecasting.
+            scope_ids: Restrict to these IDs (set by an outer level); ``None`` =
+                all IDs.
 
         """
-        train_size = rolling_window.get("train_size", 1)
-        val_size = rolling_window.get("val_size", 1)
-        test_size = rolling_window.get("test_size", 1)
-        step_size = rolling_window.get("step_size", 1)
-        min_rows = rolling_window.get("min_rows", 0)
-        reset_per_split = rolling_window.get("reset_per_split", True)
+        rolling = levels[level]
+        axis = rolling.axis
+        is_leaf = level == len(levels) - 1
 
-        window_size = train_size + val_size + test_size
-        IDs = input_loader.get_IDs()
+        # Held-fixed grouping: ID axis is a single pass; timestamp axis rolls
+        # within each ID (dims kept together).
+        if axis == "ID":
+            units = [None]
+        else:
+            units = list(
+                input_loader.get_IDs() if scope_ids is None else scope_ids
+            )
 
-        if len(IDs) < window_size:
+        for unit in units:
+            values = self._axis_values(input_loader, axis, unit, scope_ids)
+            for train_vals, val_vals, test_vals in self._iter_windows(values, rolling):
+                if train and rolling.retrain:
+                    self._fit_window(
+                        input_loader, axis, unit, train_vals, val_vals,
+                        rolling.min_rows,
+                    )
+                if forecast:
+                    if is_leaf:
+                        self._forecast_window(
+                            input_loader, output_loader, axis, unit,
+                            train_vals, val_vals, test_vals, rolling.min_rows,
+                        )
+                    else:
+                        inner_scope = list(test_vals) if axis == "ID" else [unit]
+                        self._rolling_window(
+                            input_loader, output_loader, levels, level + 1,
+                            train, forecast, scope_ids=inner_scope,
+                        )
+
+    def _axis_slice(self, input_loader, axis, unit, vals, params):
+        """Loader frame for ``vals`` along ``axis`` (``None`` if ``vals`` empty)."""
+        if len(vals) == 0:
+            return None
+        if axis == "ID":
+            return input_loader.get_df(IDs=np.array(list(vals)), **params)
+        return input_loader.get_df(
+            IDs=unit, timestamps=np.array(list(vals)), **params
+        )
+
+    def _fit_window(self, input_loader, axis, unit, train_vals, val_vals, min_rows):
+        """Fit the train-stage models on one window's train (+ val) slice."""
+        params = self.train.input_loaders_params
+        for model in self.train.models:
+            train_df = self._axis_slice(input_loader, axis, unit, train_vals, params)
+            if train_df is None or (min_rows > 0 and train_df.shape[0] < min_rows):
+                continue
+            model.set_data(train_df)
+            if len(val_vals) and hasattr(model, "set_validation_data"):
+                val_df = self._axis_slice(input_loader, axis, unit, val_vals, params)
+                if val_df is not None and not (
+                    min_rows > 0 and val_df.shape[0] < min_rows
+                ):
+                    model.set_validation_data(val_df)
+            model.train(**self.train.params)
+
+    def _forecast_window(
+        self, input_loader, output_loader, axis, unit,
+        train_vals, val_vals, test_vals, min_rows,
+    ):
+        """Forecast one window's test slice and write it to the output loader.
+
+        - ``axis="ID"``: apply each model to each held-out test ID's own series,
+          using the forecast stage's ``params``.
+        - ``axis="timestamp"``: seed the train+val context, forecast
+          ``len(test_vals)`` steps, and place them at the real test timestamps
+          (``set_data`` re-stamps from zero, so forecasts are placed explicitly
+          to stay aligned with the ground truth for metric pairing).
+        """
+        if axis == "ID":
+            for model in self.forecast.models:
+                for ID in test_vals:
+                    df = input_loader.get_df(
+                        IDs=ID, **self.forecast.input_loaders_params
+                    )
+                    if min_rows > 0 and df.shape[0] < min_rows:
+                        continue
+                    model.set_data(df)
+                    model.forecast(**self.forecast.params)
+                    model.register_data(
+                        output_loader, append_to_feature=str(model), ID=ID,
+                    )
             return
 
-        # Reset models at the start of each split (stock)
-        if reset_per_split:
-            for model in self.train.models:
-                if hasattr(model, "build_model"):
-                    model.model = model.build_model()
-
-        for start in range(0, len(IDs) - window_size + 1, step_size):
-            train_IDs = IDs[start : start + train_size]
-            val_IDs = IDs[start + train_size : start + train_size + val_size]
-            test_IDs = IDs[start + train_size + val_size : start + window_size]
-
-            if train:
-                for model in self.train.models:
-                    # Collect training data from all train IDs
-                    train_dfs = []
-                    skip = False
-                    for ID in train_IDs:
-                        df = input_loader.get_df(
-                            IDs=ID, **self.train.input_loaders_params
-                        )
-                        if min_rows > 0 and df.shape[0] < min_rows:
-                            skip = True
-                            break
-                        train_dfs.append(df)
-                    if skip:
-                        continue
-
-                    # Collect validation data from all val IDs
-                    val_dfs = []
-                    for ID in val_IDs:
-                        df = input_loader.get_df(
-                            IDs=ID, **self.train.input_loaders_params
-                        )
-                        if min_rows > 0 and df.shape[0] < min_rows:
-                            skip = True
-                            break
-                        val_dfs.append(df)
-                    if skip:
-                        continue
-
-                    # Check test data availability
-                    for ID in test_IDs:
-                        df = input_loader.get_df(
-                            IDs=ID, **self.train.input_loaders_params
-                        )
-                        if min_rows > 0 and df.shape[0] < min_rows:
-                            skip = True
-                            break
-                    if skip:
-                        continue
-
-                    # Set training data (concatenate if multiple IDs)
-                    if len(train_dfs) == 1:
-                        model.set_data(train_dfs[0])
-                    else:
-                        model.set_data(pd.concat(train_dfs))
-
-                    # Set validation data if model supports it
-                    if hasattr(model, "set_validation_data") and val_dfs:
-                        if len(val_dfs) == 1:
-                            model.set_validation_data(val_dfs[0])
-                        else:
-                            model.set_validation_data(pd.concat(val_dfs))
-
-                    model.train(**self.train.params)
-
-            if forecast:
-                for model in self.forecast.models:
-                    for ID in test_IDs:
-                        df = input_loader.get_df(
-                            IDs=ID, **self.forecast.input_loaders_params
-                        )
-                        if min_rows > 0 and df.shape[0] < min_rows:
-                            continue
-                        model.set_data(df)
-                        model.forecast(**self.forecast.params)
-                        model.register_data(
-                            output_loader,
-                            append_to_feature=str(model),
-                            ID=ID,
-                        )
+        context_vals = np.array(list(train_vals) + list(val_vals))
+        test_timestamps = np.array(test_vals)
+        for model in self.forecast.models:
+            model.set_data(input_loader.get_df(IDs=unit, timestamps=context_vals))
+            model.forecast(T=len(test_vals))
+            predictions = model.get_data(tstype=np.ndarray)
+            out_features = np.array(
+                [f"{feature}_{model}" for feature in model.feature_label]
+            )
+            output_loader.add_data(
+                data=predictions,
+                ID=unit,
+                timestamp=test_timestamps,
+                dim_label=model.dim_label,
+                feature_label=out_features,
+                collision="update",
+            )
 
     def _resolve_stages(
         self, initialize, pre_process, generate, train, forecast, output

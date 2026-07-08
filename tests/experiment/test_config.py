@@ -6,7 +6,14 @@ import numpy as np
 import pytest
 from numpy.random import Generator, PCG64
 
-from TSbench.experiment import Experiment, ExperimentConfig, General, Stage, Output
+from TSbench.experiment import (
+    Experiment,
+    ExperimentConfig,
+    General,
+    Stage,
+    RollingWindow,
+    Output,
+)
 from TSbench.TSdata.TSloader import LoaderTSdf
 from TSbench.TSmodels import Constant
 
@@ -50,7 +57,7 @@ class TestDefaults:
         assert s.params == {}
         assert s.input_loaders_params == {}
         assert s.id_wise is False
-        assert s.rolling_window is None
+        assert s.rolling is None
 
     def test_experiment_config_defaults(self):
         cfg = ExperimentConfig()
@@ -80,6 +87,37 @@ class TestValidation:
         with pytest.raises(ValueError):
             Output(metrics=[42])  # type: ignore[list-item]
 
+    def test_rolling_window_bad_axis_raises(self):
+        with pytest.raises(ValueError):
+            RollingWindow(axis="dim")  # reserved, not yet supported
+
+    def test_rolling_window_bad_size_raises(self):
+        with pytest.raises(ValueError):
+            RollingWindow(train_size=0)
+
+    def test_timestamp_rolling_with_forecast_T_raises(self):
+        # If any rolling level rolls on timestamp, the horizon is its test_size;
+        # a forecast 'T' would be silently ignored, so it's rejected.
+        with pytest.raises(ValueError):
+            ExperimentConfig(
+                train=Stage(rolling=[
+                    RollingWindow(axis="ID"),
+                    RollingWindow(axis="timestamp", retrain=False),
+                ]),
+                forecast=Stage(params={"T": 5}),
+            )
+
+    def test_id_rolling_with_forecast_T_ok(self):
+        # All-ID rolling: the forecast 'T' is meaningful, so no conflict.
+        ExperimentConfig(
+            train=Stage(rolling=[RollingWindow(axis="ID")]),
+            forecast=Stage(params={"T": 5}),
+        )
+
+    def test_rolling_not_a_list_raises(self):
+        with pytest.raises(ValueError):
+            Stage(rolling=RollingWindow(axis="ID"))  # type: ignore[arg-type]
+
 
 # ---------------------------------------------------------------------------
 # Dataclass-native wiring through Experiment
@@ -102,10 +140,10 @@ class TestWiring:
             _cleanup(self.DATA_PATH)
 
     def test_rolling_window_wired(self):
-        rw = {"train_size": 1, "val_size": 1, "test_size": 1}
+        rw = [RollingWindow(train_size=1, val_size=1, test_size=1)]
         try:
-            exp = self._experiment(train=Stage(rolling_window=rw))
-            assert exp.train.rolling_window == rw
+            exp = self._experiment(train=Stage(rolling=rw))
+            assert exp.train.rolling == rw
         finally:
             _cleanup(self.DATA_PATH)
 
