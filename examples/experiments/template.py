@@ -8,7 +8,7 @@ score with metrics) and also demonstrates the *advanced escape hatches* that
 - a custom ``initialize`` callable (prepare the dataset before the run),
 - an ``Output`` transform (``process_df``) applied to the final results,
 - inline notes for the remaining knobs (``device``, ``id_wise``,
-  ``rolling_window``, ``input_loaders_params``, and the ``Process``-based
+  ``rolling``, ``input_loaders_params``, and the ``Process``-based
   ``pre_process``/``run_process`` stages).
 
 Run from the repo root::
@@ -79,9 +79,11 @@ config = ExperimentConfig(
     train=Stage(
         models=[constant, arma],
         input_loaders_params={"end_index": TRAIN_END},  # train on the head only
-        # rolling_window={         # rolling-window training over IDs (days):
-        #     "train_size": 1, "val_size": 1, "test_size": 1, "step_size": 1,
-        # },
+        # Rolling-window training (from TSbench.experiment import RollingWindow).
+        # A list: its order is the nesting order, outermost first.
+        # rolling=[
+        #     RollingWindow(axis="ID", train_size=1, val_size=1, test_size=1),
+        # ],
     ),
     forecast=Stage(
         models=[constant, arma],

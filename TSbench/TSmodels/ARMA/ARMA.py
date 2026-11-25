@@ -25,7 +25,7 @@ class ARMA(Model):
         ar (np.ndarray): Field to specify weigths of the autoregressive process.
         ma (np.ndarray): Field to specify weigths of the moving average process.
         drift (int): Specifes the drift of the model. Default is 0.
-        variance (int): Specifes the variance of the model. Default is 1.
+        variance (float): Specifes the variance of the model. Default is 1.
         **model_args: Arguments for `Model`.
 
     Examples:
@@ -50,7 +50,7 @@ class ARMA(Model):
         ar: Optional[np.ndarray] = None,
         ma: Optional[np.ndarray] = None,
         drift: int = 0,
-        variance: int = 1,
+        variance: float = 1,
         **model_args,
     ) -> None:
         """Initialize ARMA."""
