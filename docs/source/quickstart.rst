@@ -186,3 +186,46 @@ Read and write data
    .. code:: python
 
       loader.rm_dataset()
+
+Experiments
+-----------
+
+An ``Experiment`` runs the generate → train → forecast → output pipeline from a
+typed ``ExperimentConfig``. The config is assembled from small dataclasses:
+``General`` (paths, parallelism), one ``Stage`` per generate/train/forecast
+step, and an optional ``Output`` (metrics). They provide defaults, validation,
+and editor autocomplete.
+
+.. code:: python
+
+   from numpy.random import Generator, PCG64
+
+   from TSbench.experiment import Experiment, ExperimentConfig, General, Stage, Output
+   from TSbench.metrics import mae, rmse
+   from TSbench.TSmodels import ARMA
+
+   model = ARMA(
+       lag=1, rg=Generator(PCG64(1234)), dim_label=["d0"], feature_label=["feature"]
+   )
+
+   config = ExperimentConfig(
+       general=General(data_path="data/exp/"),
+       generate=Stage(models=[model], params={"N": 100}),
+       # Train on the first 80 points and forecast the last 20, so the forecast
+       # overlaps the generated values and can be scored.
+       train=Stage(models=[model], input_loaders_params={"end_index": 80}),
+       forecast=Stage(
+           models=[model], params={"T": 20}, input_loaders_params={"end_index": 80}
+       ),
+       output=Output(metrics=[mae, rmse]),
+   )
+
+   exp = Experiment(config)
+   exp.run()              # no flags = run every configured stage
+   print(exp.results)     # {ID: {model: {metric_name: value}}}
+
+``run()`` with no arguments auto-detects and runs every configured stage; pass
+explicit flags (e.g. ``run(generate=True)``) to run a subset. The only path the
+experiment reads or writes is the dataset directory named in ``General`` (see
+:doc:`more` for how data is stored). For complete, runnable scripts, see
+:doc:`examples`.
