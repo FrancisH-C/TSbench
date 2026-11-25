@@ -7,6 +7,9 @@ from TSbench.TSmodels.GARCH import GARCH, VEC_GARCH, VEC_SPD_GARCH
 from TSbench.TSmodels.models import ForecastingModel, GeneratorModel, Model
 from TSbench.TSmodels.simple import Constant
 
+if importlib.util.find_spec("keras") is not None:
+    from TSbench.TSmodels.deep_learning import KerasModel
+
 if importlib.util.find_spec("rpy2") is not None:
     from TSbench.TSmodels.R import rGARCH
 
@@ -22,6 +25,7 @@ __all__ = [
     "Model",
     "rGARCH",
     "Constant",
+    "KerasModel",
     "Deterministic",
     "PointProcess",
 ]

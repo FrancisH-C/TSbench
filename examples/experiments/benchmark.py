@@ -24,30 +24,27 @@ from TSbench.TSmodels import ARMA, Constant
 
 DATA_PATH = str(Path(__file__).parent / "data" / "benchmark")
 
-N = 100              # length of the generated series
-HOLDOUT = 20         # last HOLDOUT points are forecast and scored
+N = 100  # length of the generated series
+HOLDOUT = 20  # last HOLDOUT points are forecast and scored
 TRAIN_END = N - HOLDOUT
 
 # Data-generating process (the "truth").
 dgp = ARMA(
-    lag=1, rg=Generator(PCG64(1)), dim_label=["d0"],
-    feature_label=["feature"], name="series",
+    lag=1,
+    rg=Generator(PCG64(1)),
+    dim_label=["d0"],
+    feature_label=["feature"],
+    name="series",
 )
 
 # Competing forecasters.
-constant = Constant(
-    rg=Generator(PCG64(2)), dim_label=["d0"], feature_label=["feature"]
-)
-arma = ARMA(
-    lag=1, rg=Generator(PCG64(3)), dim_label=["d0"], feature_label=["feature"]
-)
+constant = Constant(rg=Generator(PCG64(2)), dim_label=["d0"], feature_label=["feature"])
+arma = ARMA(lag=1, rg=Generator(PCG64(3)), dim_label=["d0"], feature_label=["feature"])
 
 config = ExperimentConfig(
     general=General(data_path=DATA_PATH),
     generate=Stage(models=[dgp], params={"N": N}),
-    train=Stage(
-        models=[constant, arma], input_loaders_params={"end_index": TRAIN_END}
-    ),
+    train=Stage(models=[constant, arma], input_loaders_params={"end_index": TRAIN_END}),
     forecast=Stage(
         models=[constant, arma],
         params={"T": HOLDOUT},
@@ -61,6 +58,7 @@ if __name__ == "__main__":
     exp = Experiment(config)
     exp.run()
     # exp.results: {ID: {model: {metric_name: value}}}
+    print(exp.results)
     for ID, per_model in exp.results.items():
         print(f"series {ID!r}:")
         for model, scores in per_model.items():
